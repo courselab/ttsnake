@@ -44,6 +44,10 @@
 #define SCENE_DIR_INTRO "intro" /* Path to the intro animation scenes. */
 #define SCENE_DIR_GAME  "game"	/* Path to the game animation scene. */
 
+#define SNAKE_BODY       "O"     /* Character to draw the snake. */
+#define ENERGY_BLOCK     "+"	 /* Character to draw the energy block. */
+
+#define MAX_ENERGY_BLOCKS 5	/* Maximum number of energy blocks. */
 
 /* Global variables.*/
 
@@ -65,6 +69,33 @@ void quit ()
   go_on=0;
 }
 
+/* The snake data structrue. */
+
+typedef enum {up, right, left, down} direction_t; 
+
+typedef struct snake_st snake_t;
+
+struct snake_st
+{
+  struct
+  {
+    int x;                       /* Coordinate x of the snake's head. */
+    int y;			 /* Coordinate y of the snake's head. */
+  } head;			 /* The snake's head. */
+  int length;			 /* The snake length (including head). */
+  direction_t direction;	 /* Moviment direction. */
+};
+
+snake_t snake;			/* The snake istance. */
+
+/* Energy blocks. */
+
+struct
+{
+  int x;			/* Coordinate x of the energy block. */
+  int y;			/* Coordinate y of the energy block. */
+} energy_block[MAX_ENERGY_BLOCKS]; /* Array of energy blocks. */
+  
 
 /* Clear the scene vector. 
 
@@ -191,6 +222,28 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 	      (int) elapsed_total.tv_sec, fps);
       printf ("Controls: \r\n");
     }
+}
+
+
+  /* Instantiate the nake and a set of energy blocks. */
+
+#define BLOCK_INACTIVE -1;
+
+void init_game ()
+{
+  int i;
+  
+  snake.head.x = 0;
+  snake.head.y = 0;
+  snake.direction = right;
+  snake.length = 1;
+
+  for (i=0; i<MAX_ENERGY_BLOCKS; i++)
+    {
+      energy_block[i].x = BLOCK_INACTIVE;
+      energy_block[i].y = BLOCK_INACTIVE;
+    }
+  
 }
 
 /* This functions adances the game. It computes the next state
@@ -332,6 +385,9 @@ int main ()
 
   go_on=1;
   gettimeofday (&beginning, NULL);
+
+  init_game ();
+  
   playgame (game_scene);
 
   

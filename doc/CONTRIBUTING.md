@@ -23,6 +23,13 @@ branches.
 If you are developer and is assinged an issue, and you believe you are not
 able to handle timely, please, try to reasign it to someone else.
 
+Code wisdom for this project
+
+- Branch always (create a new feature branch for each modification)
+- Commit small (add & commit single changes for better traceability)
+- Merge safe (test, discuss and approve merges to permanent branches)
+
+
 [1] https://nvie.com/posts/a-successful-git-branching-model/
 
 [2] https://semver.org/
