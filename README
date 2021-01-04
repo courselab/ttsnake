@@ -11,11 +11,15 @@
 
  * Quick instructions:
 
+ If you obtained the source from the VCS repository
+ 
+ $ ./autogen.sh
  $ ./configure
  $ make
 
  Optionally, if you wish to build and install the software under /tmp/foo
 
+ $ ./autogen.sh
  $ ./configure --prefix=/tmp/foo
  $ make
  $ make install
@@ -39,8 +43,8 @@
 
  Controls:
 
-	+ decreases the game speed
-	- increases the game speed 
-	q quits
+	+   decrease the game speed
+	-   increase the game speed 
+	q   quit the game (also skip intro)
 
 
