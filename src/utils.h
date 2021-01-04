@@ -1,6 +1,6 @@
 /* utils.h - Some handy tools.
 
-   Copyright (c) 2021 - TTSnake (https://github.com/courselab/ttsnake) 
+   Copyright (c) 2021 - Monaco F. J. <monaco@usp.br> 
 
    This file is part of Real-Time Sand Box - TexTronSnake
 

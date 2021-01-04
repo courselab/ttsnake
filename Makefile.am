@@ -1,6 +1,6 @@
 ##   Makefile.am - Main Automake script for autohello
 ##
-##   Copyright (c) 2014 - TTSnake (https://github.com/courselab/ttsnake)
+##   Copyright (c) 2014 - Monaco F. J. <monaco@usp.br>
 ##
 ##   This file is part of TexTronSnake.
 ##

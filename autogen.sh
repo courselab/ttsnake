@@ -2,7 +2,7 @@
 #
 #  autogen.sh - Autootols boostrap for developers
 #    
-#    Copyright (c) 2021 - TTSnake (https://github.com/courselab/ttsnake)
+#    Copyright (c) 2021 - Monaco F. J. <monaco@usp.br>
 #
 #    This file is part of TexTronSnake. 
 #

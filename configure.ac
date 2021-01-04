@@ -1,6 +1,6 @@
 dnl    configure.ac - Autoconf script 
 dnl    
-dnl    Copyright (c) 2021 - TTSnake (https://github.com/courselab/ttsnake)
+dnl    Copyright (c) 2021 - Monaco F. J. <monaco@usp.br>
 dnl
 dnl    This file is part of TexTronSnake. 
 dnl
