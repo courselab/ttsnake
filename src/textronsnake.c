@@ -193,12 +193,20 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
     }
 }
 
+
+  /* Instantiate the nake and a set of energy blocks. */
+
+void init_game (char scene[][NROWS][NCOLS])
+{
+  scene[0][0][0] += 0; 		/* Does nothing, for now. */
+}
+
 /* This functions adances the game. It computes the next state
    and updates the scene vector. This is Tron's game logic. */
 
 void advance (char scene[][NROWS][NCOLS])
 {
-  scene[0][0][0] += 0; 		/* Does nothing, for now. */
+  init_game (scene);
 }
 
 /* This function plays the game introduction animation. */
