@@ -220,7 +220,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
     {
       printf ("Elapsed: %5ds, fps=%5.2f\r\n", /* CR-LF because of ncurses. */
 	      (int) elapsed_total.tv_sec, fps);
-      printf ("Controls: \r\n");
+      printf ("Controls: q: quit\t\r\n");
     }
 }
 
