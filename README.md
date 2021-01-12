@@ -11,6 +11,19 @@
 
  * Quick instructions:
 
+ If you have obtained the project source from the version control repository
+ 
+ ```
+ $ ./autogen.sh
+ $ ./configure
+ $ make
+ ```
+ 
+ Alternatively, if you have obtained the source from a distribution tarball,
+ you should already have the configuration script pre-built. In this case,
+ you may skip evoking autotools and use just
+
+
 ```
  $ ./configure
  $ make
