@@ -49,6 +49,9 @@
 
 #define MAX_ENERGY_BLOCKS 5	/* Maximum number of energy blocks. */
 
+#define MIN_GAME_DELAY 10200
+#define MAX_GAME_DELAY 94000
+
 /* Global variables.*/
 
 struct timeval beginning,	/* Time when game started. */
@@ -310,25 +313,25 @@ void * userinput ()
 {
   int c;
   while (1)
+  {
+    c = getchar();
+    switch (c)
     {
-      c = getchar();
-      switch (c)
-      {
-      case '+':			/* Increase FPS. */
-	game_delay = game_delay * (0.9) ;
-	break;
-      case '-':			/* Decrease FPS. */
-	game_delay = game_delay * (1.1) ;
-	break;
-      case 'q':
-	kill (0, SIGINT);	/* Quit. */
-	break;
-      default:
-	break;
-      }
-
+    case '+':			/* Increase FPS. */
+      if(game_delay * (0.9) > MIN_GAME_DELAY)
+        game_delay *= (0.9);
+    break;
+    case '-':			/* Decrease FPS. */
+      if(game_delay * (1.1) < MAX_GAME_DELAY)
+        game_delay *= (1.1) ;
+    break;
+    case 'q':
+      kill (0, SIGINT);	/* Quit. */
+    break;
+    default:
+    break;
     }
-  
+  }
 }
 
 
