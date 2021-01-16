@@ -31,6 +31,11 @@ LT_INIT                         dnl Libtool support in 'configure'
 
 AC_PROG_CC 		        dnl Defines CC
 
+dnl Alternative short name used for directories, binary prefixes etc.
+
+AC_DEFINE(ALT_SHORT_NAME,["ttsnake"],[Define alternative short name.])
+AC_SUBST([alt_short_name],[ttsnake])
+
 dnl Replace missing functions (see also GNUlib)
 
 dnl AC_CONFIG_LIBOBJ_DIR([replace])
@@ -46,6 +51,7 @@ dnl Define variables to be used by Automake
 AC_SUBST([CPP_FLAGS],"-ansi -D_POSIX_C_SOURCE=200809L -Wall -Wextra") 
 AC_SUBST([C_FLAGS])
 AC_SUBST([LD_FLAGS])
+
 
 dnl Canocial check for POSIX threads.
 

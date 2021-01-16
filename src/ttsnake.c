@@ -139,8 +139,10 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
 	 /usr/share/<dir>. Therefore, if scenes are modified, they should be
 	 reinstalle (program won't read them from project tree.)  */
       
-      sprintf (scenefile, DATADIR "/" PACKAGE_TARNAME "/%s/scene-%07d.txt", dir, k+1);
+      sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
 
+      printf ("Reading from %s\n", scenefile);
+      
       file = fopen (scenefile, "r");
       sysfatal (!file);
 
