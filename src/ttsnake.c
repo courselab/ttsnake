@@ -8,12 +8,12 @@
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -49,6 +49,9 @@
 
 #define MAX_ENERGY_BLOCKS 5	/* Maximum number of energy blocks. */
 
+#define MIN_GAME_DELAY 10200
+#define MAX_GAME_DELAY 94000
+
 /* Global variables.*/
 
 struct timeval beginning,	/* Time when game started. */
@@ -71,7 +74,7 @@ void quit ()
 
 /* The snake data structrue. */
 
-typedef enum {up, right, left, down} direction_t; 
+typedef enum {up, right, left, down} direction_t;
 
 typedef struct snake_st snake_t;
 
@@ -97,9 +100,9 @@ struct
   int x;			/* Coordinate x of the energy block. */
   int y;			/* Coordinate y of the energy block. */
 } energy_block[MAX_ENERGY_BLOCKS]; /* Array of energy blocks. */
-  
 
-/* Clear the scene vector. 
+
+/* Clear the scene vector.
 
    The scene vector is an array of nscenes matrixes of
    NROWS x NCOLS chars, containg the ascii image.
@@ -110,15 +113,15 @@ void clearscene (char scene[][NROWS][NCOLS], int nscenes)
   int i, j, k;
 
   /* Fill the ncenes matrixes with blaks. */
-  
+
   for (k=0; k<nscenes; k++)
     for (i=0; i<NROWS; i++)
       for (j=0; j<NCOLS; j++)
 	scene[k][i][j] = BLANK;
-  
+
  }
 
-/* Load all scenes from dir into the scene vector. 
+/* Load all scenes from dir into the scene vector.
 
    The scene vector is an array of nscenes matrixes of
    NROWS x NCOLS chars, containg the ascii image.
@@ -130,9 +133,9 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
   int i, j, k;
   FILE *file;
   char scenefile[1024], c;
-  
+
   /* Read nscenes. */
-  
+
   i=0;
   for (k=0; k<nscenes; k++)
     {
@@ -141,8 +144,10 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
 	 /usr/share/<dir>. Therefore, if scenes are modified, they should be
 	 reinstalle (program won't read them from project tree.)  */
       
-      sprintf (scenefile, DATADIR "/" PACKAGE_TARNAME "/%s/scene-%07d.txt", dir, k+1);
+      sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
 
+      printf ("Reading from %s\n", scenefile);
+      
       file = fopen (scenefile, "r");
       sysfatal (!file);
 
@@ -152,7 +157,7 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
       	{
 
 	  /* Read NCOLS columns from row i.*/
-	  
+
       	  for (j=0; j<NCOLS; j++)
 	    {
 
@@ -179,17 +184,17 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
 		  scene[k][i][j] = '-';
 	    }
 
-	  
+
 	  /* Discard the rest of the line (if longer than NCOLS). */
-	  
+
       	  while (((c = fgetc(file)) != '\n') && (c != EOF));
 
       	}
 
       fclose (file);
-     
+
     }
-  
+
 }
 
 
@@ -213,7 +218,7 @@ void draw (char scene[][NROWS][NCOLS], int number)
     }
 }
 
-/* Draw scene indexed by number, get some statics and repeat. 
+/* Draw scene indexed by number, get some statics and repeat.
    If meny is true, draw the game controls.*/
 
 void showscene (char scene[][NROWS][NCOLS], int number, int menu)
@@ -221,10 +226,10 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
   double fps;
 
   /* Draw the scene. */
-  
+
   draw (scene, number);
 
-  memcpy (&before, &now, sizeof (struct timeval)); 
+  memcpy (&before, &now, sizeof (struct timeval));
   gettimeofday (&now, NULL);
 
   timeval_subtract (&elapsed_last, &now, &before);
@@ -233,7 +238,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
-  
+
   if (menu)
     {
       printf ("Elapsed: %5ds, fps=%5.2f\r\n", /* CR-LF because of ncurses. */
@@ -250,8 +255,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 void init_game (char scene[][NROWS][NCOLS])
 {
   int i;
-  
-  snake.head.x = 0; /* TODO: is this necessary? */
+  snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
   snake.length = 7;
@@ -280,7 +284,7 @@ void init_game (char scene[][NROWS][NCOLS])
       energy_block[i].x = BLOCK_INACTIVE;
       energy_block[i].y = BLOCK_INACTIVE;
     }
-  
+
 }
 
 /* This functions adances the game. It computes the next state
@@ -350,14 +354,14 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
   how_long.tv_sec = 0;
 
   /* User may change delay (game speedy) asynchronously. */
-  
+
   while (go_on)
     {
       clear ();                               /* Clear screen. */
       refresh ();			      /* Refresh screen. */
-      
+
       advance (scene);		               /* Advance game.*/
-      
+
       showscene (scene, k, 1);                /* Show k-th scene. */
       k = (k + 1) % N_GAME_SCENES;	      /* Circular buffer. */
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
@@ -367,32 +371,32 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
 }
 
 
-/* Process user input. 
+/* Process user input.
    This function runs in a separate thread. */
 
 void * userinput ()
 {
   int c;
   while (1)
+  {
+    c = getchar();
+    switch (c)
     {
-      c = getchar();
-      switch (c)
-      {
-      case '+':			/* Increase FPS. */
-	game_delay = game_delay * (0.9) ;
-	break;
-      case '-':			/* Decrease FPS. */
-	game_delay = game_delay * (1.1) ;
-	break;
-      case 'q':
-	kill (0, SIGINT);	/* Quit. */
-	break;
-      default:
-	break;
-      }
-
+    case '+':			/* Increase FPS. */
+      if(game_delay * (0.9) > MIN_GAME_DELAY)
+        game_delay *= (0.9);
+    break;
+    case '-':			/* Decrease FPS. */
+      if(game_delay * (1.1) < MAX_GAME_DELAY)
+        game_delay *= (1.1) ;
+    break;
+    case 'q':
+      kill (0, SIGINT);	/* Quit. */
+    break;
+    default:
+    break;
     }
-  
+  }
 }
 
 
@@ -400,18 +404,18 @@ void * userinput ()
 
 int main ()
 {
-  struct sigaction act;		
+  struct sigaction act;
   int rs;
   pthread_t pthread;
   char intro_scene[N_INTRO_SCENES][NROWS][NCOLS];
   char game_scene[N_GAME_SCENES][NROWS][NCOLS];
 
   /* Handle SIGNINT (loop control flag). */
-  
+
   sigaction(SIGINT, NULL, &act);
   act.sa_handler = quit;
   sigaction(SIGINT, &act, NULL);
-  
+
   /* Ncurses initialization. */
 
   initscr();
@@ -426,7 +430,7 @@ int main ()
 
 
   /* Handle game controls in a different thread. */
-  
+
   rs = pthread_create (&pthread, NULL, userinput, NULL);
   sysfatal (rs);
 
@@ -434,17 +438,17 @@ int main ()
   /* Play intro. */
 
   clearscene(intro_scene, N_INTRO_SCENES);
-  
+
   readscenes (SCENE_DIR_INTRO, intro_scene, N_INTRO_SCENES);
-  
+
   go_on=1;			/* User may skip intro (q). */
 
   playmovie (intro_scene);
 
   /* Play game. */
-  
+
   clearscene(intro_scene, N_GAME_SCENES);
-  
+
   readscenes (SCENE_DIR_GAME, game_scene, N_GAME_SCENES);
 
   go_on=1;
@@ -454,7 +458,7 @@ int main ()
   
   playgame (game_scene);
 
-  
+
   endwin();
 
   return EXIT_SUCCESS;
