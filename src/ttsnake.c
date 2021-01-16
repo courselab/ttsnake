@@ -393,6 +393,18 @@ void * userinput ()
     case 'q':
       kill (0, SIGINT);	/* Quit. */
     break;
+    case 'w':
+      snake.direction = up;
+    break;
+    case 'a':
+      snake.direction = left;
+    break;
+    case 's':
+      snake.direction = down;
+    break;
+    case 'd':
+      snake.direction = right;
+    break;
     default:
     break;
     }
