@@ -145,7 +145,7 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
       sysfatal (!file);
 
       /* Iterate through NROWS. */
-      
+
       for (i=0; i<NROWS; i++)
       	{
 
@@ -157,16 +157,31 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
 	      /* Actual ascii text file may be smaller than NROWS x NCOLS.
 		 If we read something out of the 32-127 ascii range,
 		 consider a blank instead.*/
-	      
+
 	      c = (char) fgetc (file);
 	      scene[k][i][j] = ((c>=' ') && (c<='~')) ? c : BLANK;
+
+
+	      /* Draw border. */
+
+	      if (j==0)
+		scene[k][i][j] = '|';
+	      else
+		if (j==NCOLS-1)
+		  scene[k][i][j] = '|';
+
+	      if (i==0)
+		scene[k][i][j] = '-';
+	      else
+		if (i==NROWS-1)
+		  scene[k][i][j] = '-';
 	    }
 
 	  
 	  /* Discard the rest of the line (if longer than NCOLS). */
 	  
       	  while (((c = fgetc(file)) != '\n') && (c != EOF));
-	  
+
       	}
 
       fclose (file);
@@ -174,6 +189,7 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
     }
   
 }
+
 
 /* Draw a the given scene on the screen. Currently, this iterates through the
    scene matrix outputig each caracter by means of indivudal puchar calls. One
@@ -220,7 +236,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
     {
       printf ("Elapsed: %5ds, fps=%5.2f\r\n", /* CR-LF because of ncurses. */
 	      (int) elapsed_total.tv_sec, fps);
-      printf ("Controls: \r\n");
+      printf ("Controls: q: quit\t\r\n");
     }
 }
 
@@ -272,7 +288,6 @@ void playmovie (char scene[N_INTRO_SCENES][NROWS][NCOLS])
       how_long.tv_nsec = (movie_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	       /* Apply delay. */
     }
-
 }
 
 
