@@ -141,9 +141,11 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
       /* Program always read scenes from the installed data path (DATADIR, e.g.
 	 /usr/share/<dir>. Therefore, if scenes are modified, they should be
 	 reinstalle (program won't read them from project tree.)  */
+      
+      sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
 
-      sprintf (scenefile, DATADIR "/" PACKAGE_TARNAME "/%s/scene-%07d.txt", dir, k+1);
-
+      printf ("Reading from %s\n", scenefile);
+      
       file = fopen (scenefile, "r");
       sysfatal (!file);
 
@@ -163,6 +165,21 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
 
 	      c = (char) fgetc (file);
 	      scene[k][i][j] = ((c>=' ') && (c<='~')) ? c : BLANK;
+
+
+	      /* Draw border. */
+
+	      if (j==0)
+		scene[k][i][j] = '|';
+	      else
+		if (j==NCOLS-1)
+		  scene[k][i][j] = '|';
+
+	      if (i==0)
+		scene[k][i][j] = '-';
+	      else
+		if (i==NROWS-1)
+		  scene[k][i][j] = '-';
 	    }
 
 
@@ -177,6 +194,7 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
     }
 
 }
+
 
 /* Draw a the given scene on the screen. Currently, this iterates through the
    scene matrix outputig each caracter by means of indivudal puchar calls. One
@@ -275,7 +293,6 @@ void playmovie (char scene[N_INTRO_SCENES][NROWS][NCOLS])
       how_long.tv_nsec = (movie_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	       /* Apply delay. */
     }
-
 }
 
 

@@ -45,7 +45,7 @@
  PROGRAM EXECUTION
  --------------------------------------------------
 
- Usage:  textronsnake 
+ Usage:  ttsnake
 
 
  FUNCTIONALITY
