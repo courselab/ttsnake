@@ -241,6 +241,8 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 void init_game ()
 {
   int i;
+	
+  srand(time(NULL));
 
   snake.head.x = 0;
   snake.head.y = 0;
