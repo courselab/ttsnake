@@ -44,8 +44,8 @@
 #define SCENE_DIR_INTRO "intro" /* Path to the intro animation scenes. */
 #define SCENE_DIR_GAME  "game"	/* Path to the game animation scene. */
 
-#define SNAKE_BODY       "O"     /* Character to draw the snake. */
-#define ENERGY_BLOCK     "+"	 /* Character to draw the energy block. */
+#define SNAKE_BODY       'O'     /* Character to draw the snake. */
+#define ENERGY_BLOCK     '+'	 /* Character to draw the energy block. */
 
 #define MAX_ENERGY_BLOCKS 5	/* Maximum number of energy blocks. */
 
@@ -78,14 +78,16 @@ typedef enum {up, right, left, down} direction_t;
 
 typedef struct snake_st snake_t;
 
+typedef struct pair_st
+{
+  int x, y;
+} pair_t;
+
 struct snake_st
 {
-  struct
-  {
-    int x;                       /* Coordinate x of the snake's head. */
-    int y;			 /* Coordinate y of the snake's head. */
-  } head;			 /* The snake's head. */
+  pair_t head;			 /* The snake's head. */
   int length;			 /* The snake length (including head). */
+  pair_t *positions;	/* Position of each body part of the snake. */
   direction_t direction;	 /* Moviment direction. */
 };
 
@@ -250,14 +252,32 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 
 #define BLOCK_INACTIVE -1;
 
-void init_game ()
+void init_game (char scene[][NROWS][NCOLS])
 {
   int i;
-
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
-  snake.length = 1;
+  snake.length = 7;
+
+	const pair_t initialPosition[] = {
+		{10, 8},
+		{11, 8},
+		{12, 8},
+		{13, 8},
+		{14, 8},
+		{14, 9},
+		{14, 10}
+	};
+
+  /* Initialize position of the snake, from tail to head. */
+	snake.positions = (pair_t *) malloc(snake.length * sizeof(pair_t));
+	for(i = 0; i < snake.length; i++){
+		snake.positions[i].x = initialPosition[i].x;
+		snake.positions[i].y = initialPosition[i].y;
+
+		scene[0][initialPosition[i].y][initialPosition[i].x] = SNAKE_BODY;
+	}
 
   for (i=0; i<MAX_ENERGY_BLOCKS; i++)
     {
@@ -272,7 +292,35 @@ void init_game ()
 
 void advance (char scene[][NROWS][NCOLS])
 {
-  scene[0][0][0] += 0; 		/* Does nothing, for now. */
+	pair_t head, tail;
+	head = snake.positions[snake.length - 1];
+	tail = snake.positions[0];
+
+	/* Calculate next position of the head. */
+	switch(snake.direction){
+		case up:
+			head.y -= 1;
+			break;
+		case right:
+			head.x += 1;
+			break;
+		case left:
+			head.x -= 1;
+			break;
+		case down:
+			head.y += 1;
+			break;
+	}
+
+	/* Advance snake in one step */
+	memmove(snake.positions, snake.positions + 1, sizeof(pair_t) * (snake.length-1));
+	snake.positions[snake.length - 1] = head;
+
+	/* Erase old position of the tail */
+	scene[0][tail.y][tail.x] = ' ';
+
+	/* Draw new position of the head */
+	scene[0][head.y][head.x] = SNAKE_BODY;
 }
 
 /* This function plays the game introduction animation. */
@@ -406,8 +454,8 @@ int main ()
   go_on=1;
   gettimeofday (&beginning, NULL);
 
-  init_game ();
-
+  init_game (game_scene);
+  
   playgame (game_scene);
 
 
