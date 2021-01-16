@@ -21,12 +21,12 @@ AM_CPPFLAGS = @CPP_FLAGS@ -DDATADIR=\"@datarootdir@\" -DBINDIR=\"@bindir@\"
 AM_CFLAGS =   @C_FLAGS@ 
 AM_LDFLAGS =  @LD_FLAGS@   
 
-bin_PROGRAMS = textronsnake 
+bin_PROGRAMS = ttsnake 
 
-textronsnake_SOURCES = textronsnake.c utils.c  utils.h 
+ttsnake_SOURCES = ttsnake.c utils.c  utils.h 
 
-textronsnake_CC = @PTHREAD_CC@
-textronsnake_CFLAGS = @PTHREAD_CFLAGS@ 
-textronsnake_LDADD = -lncurses $(LIBOBJS) @PTHREAD_LIBS@ 
+ttsnake_CC = @PTHREAD_CC@
+ttsnake_CFLAGS = @PTHREAD_CFLAGS@ 
+ttsnake_LDADD = -lncurses $(LIBOBJS) @PTHREAD_LIBS@ 
 
 
