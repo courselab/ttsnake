@@ -23,6 +23,9 @@ branches.
 If you are developer and is assinged an issue, and you believe you are not
 able to handle timely, please, try to reasign it to someone else.
 
+Program reads data from installed files. Therefore, if data is modified
+(e.g. scene files), remember to reinstall the project (```make install```).
+
 Code wisdom for this project
 
 - Branch always (create a new feature branch for each modification)
