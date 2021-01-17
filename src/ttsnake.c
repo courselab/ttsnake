@@ -63,7 +63,10 @@ struct timeval beginning,	/* Time when game started. */
 
 int movie_delay;		/* How long between move scenes scenes. */
 int game_delay;			/* How long between game scenes. */
-int go_on;			/* Whether to continue or to exit main loop.*/
+int go_on; 			/* Whether to continue or to exit main loop.*/
+
+int block_count; 		/*Number of energy blocks collected */
+float score;     		/* Score: average blocks / time */
 
 /* SIGINT handler. The variable go_on controls the main loop. */
 
@@ -244,11 +247,21 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
+  
+  /*Calculate score based on time*/
+  if (elapsed_total.tv_sec != 0)
+  {
+    score = (block_count / (float) (elapsed_total.tv_sec));
+  }
 
   if (menu)
     {
       printf ("Elapsed: %5ds, fps=%5.2f\r\n", /* CR-LF because of ncurses. */
 	      (int) elapsed_total.tv_sec, fps);
+      /*Add to the menu score and blocks collected */	  
+      printf ("Score: %.2f\r\n", score);
+      printf ("Blocks: %d\r\n", block_count);  
+	  
       printf ("Controls: q: quit\t\r\n");
     }
 }
@@ -264,7 +277,10 @@ void init_game (char scene[][NROWS][NCOLS])
   int i;
 	
   srand(time(NULL));
-
+  /*Set initial score and blocks collected 0 */
+  score = 0;
+  block_count = 0;
+	
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
@@ -307,6 +323,16 @@ void advance (char scene[][NROWS][NCOLS])
 	head = snake.positions[snake.length - 1];
 	tail = snake.positions[0];
 
+	int i;
+        /*When the head position is the same as the energy block*/
+  	for(i = 0; i < MAX_ENERGY_BLOCKS; i++)
+	{
+      		if(head.x == energy_block[i].x && head.y == energy_block[i].y)
+		{
+          		block_count += 1;
+		}
+	}
+	
 	/* Calculate next position of the head. */
 	switch(snake.direction){
 		case up:
