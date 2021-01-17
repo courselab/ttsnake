@@ -326,7 +326,8 @@ void advance (char scene[][NROWS][NCOLS])
 
   /* Check if head collided with border or itself */
   if(   head.x <= 0 || head.x >= NCOLS - 1
-     || head.y <= 0 || head.y >= NROWS - 1)
+     || head.y <= 0 || head.y >= NROWS - 1
+     || scene[0][head.y][head.x] == SNAKE_BODY)
   {
       player_lost = 1;
       return;
