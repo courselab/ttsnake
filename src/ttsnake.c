@@ -143,7 +143,6 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
       /* Program always read scenes from the installed data path (DATADIR, e.g.
 	 /usr/share/<dir>. Therefore, if scenes are modified, they should be
 	 reinstalle (program won't read them from project tree.)  */
-      
       sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
 
       printf ("Reading from %s\n", scenefile);
@@ -218,12 +217,14 @@ void draw (char scene[][NROWS][NCOLS], int number)
     }
 }
 
+#define BLOCK_INACTIVE -1
+
 /* Draw scene indexed by number, get some statics and repeat.
    If meny is true, draw the game controls.*/
-
 void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 {
   double fps;
+  int i;
 
   /* Draw the scene. */
 
@@ -235,6 +236,11 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
   timeval_subtract (&elapsed_last, &now, &before);
 
   timeval_subtract (&elapsed_total, &now, &beginning);
+
+  /* Displays active energy blocks */
+
+  for (i=0; i<MAX_ENERGY_BLOCKS; i++)
+    if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].x][energy_block[i].y] = ENERGY_BLOCK;
 
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
@@ -250,11 +256,15 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 
   /* Instantiate the nake and a set of energy blocks. */
 
-#define BLOCK_INACTIVE -1;
+/* Put above the showscene function so I could use it to display active blocks on current scene */
+/* #define BLOCK_INACTIVE -1 */
 
 void init_game (char scene[][NROWS][NCOLS])
 {
   int i;
+	
+  srand(time(NULL));
+
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
@@ -279,11 +289,12 @@ void init_game (char scene[][NROWS][NCOLS])
 		scene[0][initialPosition[i].y][initialPosition[i].x] = SNAKE_BODY;
 	}
 
+   /* Generate energy blocks away from the borders */
   for (i=0; i<MAX_ENERGY_BLOCKS; i++)
-    {
-      energy_block[i].x = BLOCK_INACTIVE;
-      energy_block[i].y = BLOCK_INACTIVE;
-    }
+  {
+    energy_block[i].x = (rand() % (NROWS - 2)) + 1 ;
+    energy_block[i].y = (rand() % (NCOLS - 2)) + 1;
+  }
 
 }
 
@@ -455,9 +466,7 @@ int main ()
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
-  
   playgame (game_scene);
-
 
   endwin();
 
