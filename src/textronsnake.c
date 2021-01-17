@@ -44,10 +44,13 @@
 #define SCENE_DIR_INTRO "intro" /* Path to the intro animation scenes. */
 #define SCENE_DIR_GAME  "game"	/* Path to the game animation scene. */
 
-#define SNAKE_BODY       "O"     /* Character to draw the snake. */
-#define ENERGY_BLOCK     "+"	 /* Character to draw the energy block. */
+#define SNAKE_BODY       'O'     /* Character to draw the snake. */
+#define ENERGY_BLOCK     '+'	 /* Character to draw the energy block. */
 
 #define MAX_ENERGY_BLOCKS 5	/* Maximum number of energy blocks. */
+
+#define MIN_GAME_DELAY 10200
+#define MAX_GAME_DELAY 94000
 
 /* Global variables.*/
 
@@ -75,14 +78,16 @@ typedef enum {up, right, left, down} direction_t;
 
 typedef struct snake_st snake_t;
 
+typedef struct pair_st
+{
+  int x, y;
+} pair_t;
+
 struct snake_st
 {
-  struct
-  {
-    int x;                       /* Coordinate x of the snake's head. */
-    int y;			 /* Coordinate y of the snake's head. */
-  } head;			 /* The snake's head. */
+  pair_t head;			 /* The snake's head. */
   int length;			 /* The snake length (including head). */
+  pair_t *positions;	/* Position of each body part of the snake. */
   direction_t direction;	 /* Moviment direction. */
 };
 
@@ -138,9 +143,10 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
       /* Program always read scenes from the installed data path (DATADIR, e.g.
 	 /usr/share/<dir>. Therefore, if scenes are modified, they should be
 	 reinstalle (program won't read them from project tree.)  */
+      sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
 
-      sprintf (scenefile, DATADIR "/" PACKAGE_TARNAME "/%s/scene-%07d.txt", dir, k+1);
-
+      printf ("Reading from %s\n", scenefile);
+      
       file = fopen (scenefile, "r");
       sysfatal (!file);
 
@@ -160,6 +166,21 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
 
 	      c = (char) fgetc (file);
 	      scene[k][i][j] = ((c>=' ') && (c<='~')) ? c : BLANK;
+
+
+	      /* Draw border. */
+
+	      if (j==0)
+		scene[k][i][j] = '|';
+	      else
+		if (j==NCOLS-1)
+		  scene[k][i][j] = '|';
+
+	      if (i==0)
+		scene[k][i][j] = '-';
+	      else
+		if (i==NROWS-1)
+		  scene[k][i][j] = '-';
 	    }
 
 
@@ -174,6 +195,7 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
     }
 
 }
+
 
 /* Draw a the given scene on the screen. Currently, this iterates through the
    scene matrix outputig each caracter by means of indivudal puchar calls. One
@@ -199,7 +221,6 @@ void draw (char scene[][NROWS][NCOLS], int number)
 
 /* Draw scene indexed by number, get some statics and repeat.
    If meny is true, draw the game controls.*/
-
 void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 {
   double fps;
@@ -219,7 +240,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
   /* Displays active energy blocks */
 
   for (i=0; i<MAX_ENERGY_BLOCKS; i++)
-    if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].x][energy_block[i].y] = *ENERGY_BLOCK;
+    if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].x][energy_block[i].y] = ENERGY_BLOCK;
 
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
@@ -228,7 +249,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
     {
       printf ("Elapsed: %5ds, fps=%5.2f\r\n", /* CR-LF because of ncurses. */
 	      (int) elapsed_total.tv_sec, fps);
-      printf ("Controls: \r\n");
+      printf ("Controls: q: quit\t\r\n");
     }
 }
 
@@ -238,7 +259,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 /* Put above the showscene function so I could use it to display active blocks on current scene */
 /* #define BLOCK_INACTIVE -1 */
 
-void init_game ()
+void init_game (char scene[][NROWS][NCOLS])
 {
   int i;
 	
@@ -247,7 +268,26 @@ void init_game ()
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
-  snake.length = 1;
+  snake.length = 7;
+
+	const pair_t initialPosition[] = {
+		{10, 8},
+		{11, 8},
+		{12, 8},
+		{13, 8},
+		{14, 8},
+		{14, 9},
+		{14, 10}
+	};
+
+  /* Initialize position of the snake, from tail to head. */
+	snake.positions = (pair_t *) malloc(snake.length * sizeof(pair_t));
+	for(i = 0; i < snake.length; i++){
+		snake.positions[i].x = initialPosition[i].x;
+		snake.positions[i].y = initialPosition[i].y;
+
+		scene[0][initialPosition[i].y][initialPosition[i].x] = SNAKE_BODY;
+	}
 
    /* Generate energy blocks away from the borders */
   for (i=0; i<MAX_ENERGY_BLOCKS; i++)
@@ -256,7 +296,6 @@ void init_game ()
     energy_block[i].y = (rand() % (NCOLS - 2)) + 1;
   }
 
-
 }
 
 /* This functions adances the game. It computes the next state
@@ -264,7 +303,35 @@ void init_game ()
 
 void advance (char scene[][NROWS][NCOLS])
 {
-  scene[0][0][0] += 0; 		/* Does nothing, for now. */
+	pair_t head, tail;
+	head = snake.positions[snake.length - 1];
+	tail = snake.positions[0];
+
+	/* Calculate next position of the head. */
+	switch(snake.direction){
+		case up:
+			head.y -= 1;
+			break;
+		case right:
+			head.x += 1;
+			break;
+		case left:
+			head.x -= 1;
+			break;
+		case down:
+			head.y += 1;
+			break;
+	}
+
+	/* Advance snake in one step */
+	memmove(snake.positions, snake.positions + 1, sizeof(pair_t) * (snake.length-1));
+	snake.positions[snake.length - 1] = head;
+
+	/* Erase old position of the tail */
+	scene[0][tail.y][tail.x] = ' ';
+
+	/* Draw new position of the head */
+	scene[0][head.y][head.x] = SNAKE_BODY;
 }
 
 /* This function plays the game introduction animation. */
@@ -285,7 +352,6 @@ void playmovie (char scene[N_INTRO_SCENES][NROWS][NCOLS])
       how_long.tv_nsec = (movie_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	       /* Apply delay. */
     }
-
 }
 
 
@@ -323,25 +389,25 @@ void * userinput ()
 {
   int c;
   while (1)
+  {
+    c = getchar();
+    switch (c)
     {
-      c = getchar();
-      switch (c)
-      {
-      case '+':			/* Increase FPS. */
-	game_delay = game_delay * (0.9) ;
-	break;
-      case '-':			/* Decrease FPS. */
-	game_delay = game_delay * (1.1) ;
-	break;
-      case 'q':
-	kill (0, SIGINT);	/* Quit. */
-	break;
-      default:
-	break;
-      }
-
+    case '+':			/* Increase FPS. */
+      if(game_delay * (0.9) > MIN_GAME_DELAY)
+        game_delay *= (0.9);
+    break;
+    case '-':			/* Decrease FPS. */
+      if(game_delay * (1.1) < MAX_GAME_DELAY)
+        game_delay *= (1.1) ;
+    break;
+    case 'q':
+      kill (0, SIGINT);	/* Quit. */
+    break;
+    default:
+    break;
     }
-
+  }
 }
 
 
@@ -399,10 +465,8 @@ int main ()
   go_on=1;
   gettimeofday (&beginning, NULL);
 
-  init_game ();
-
+  init_game (game_scene);
   playgame (game_scene);
-
 
   endwin();
 
