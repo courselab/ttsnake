@@ -64,6 +64,7 @@ struct timeval beginning,	/* Time when game started. */
 int movie_delay;		/* How long between move scenes scenes. */
 int game_delay;			/* How long between game scenes. */
 int go_on;			/* Whether to continue or to exit main loop.*/
+int player_lost;
 
 /* SIGINT handler. The variable go_on controls the main loop. */
 
@@ -323,6 +324,14 @@ void advance (char scene[][NROWS][NCOLS])
 			break;
 	}
 
+  /* Check if head collided with border or itself */
+  if(   head.x <= 0 || head.x >= NCOLS - 1
+     || head.y <= 0 || head.y >= NROWS - 1)
+  {
+      player_lost = 1;
+      return;
+  }
+
 	/* Advance snake in one step */
 	memmove(snake.positions, snake.positions + 1, sizeof(pair_t) * (snake.length-1));
 	snake.positions[snake.length - 1] = head;
@@ -372,6 +381,11 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
       refresh ();			      /* Refresh screen. */
 
       advance (scene);		               /* Advance game.*/
+
+      if(player_lost){
+        /* TODO */
+        return;
+      }
 
       showscene (scene, k, 1);                /* Show k-th scene. */
       k = (k + 1) % N_GAME_SCENES;	      /* Circular buffer. */
@@ -479,6 +493,7 @@ int main ()
   readscenes (SCENE_DIR_GAME, game_scene, N_GAME_SCENES);
 
   go_on=1;
+  player_lost=0;
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
