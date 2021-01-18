@@ -309,8 +309,8 @@ void init_game (char scene[][NROWS][NCOLS])
    /* Generate energy blocks away from the borders */
   for (i=0; i<MAX_ENERGY_BLOCKS; i++)
   {
-    energy_block[i].x = (rand() % (NROWS - 2)) + 1 ;
-    energy_block[i].y = (rand() % (NCOLS - 2)) + 1;
+    energy_block[i].x = (rand() % (NCOLS - 2)) + 1 ;
+    energy_block[i].y = (rand() % (NROWS - 2)) + 1;
   }
 
 }
