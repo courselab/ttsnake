@@ -244,7 +244,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
   /* Displays active energy blocks */
 
   for (i=0; i<MAX_ENERGY_BLOCKS; i++)
-    if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].x][energy_block[i].y] = ENERGY_BLOCK;
+    if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].y][energy_block[i].x] = ENERGY_BLOCK;
 
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
@@ -325,15 +325,7 @@ void advance (char scene[][NROWS][NCOLS])
 	tail = snake.positions[0];
 
 	int i;
-        /*When the head position is the same as the energy block*/
-  	for(i = 0; i < MAX_ENERGY_BLOCKS; i++)
-	{
-      		if(head.x == energy_block[i].x && head.y == energy_block[i].y)
-		{
-          		block_count += 1;
-		}
-	}
-	
+
 	/* Calculate next position of the head. */
 	switch(snake.direction){
 		case up:
@@ -349,6 +341,16 @@ void advance (char scene[][NROWS][NCOLS])
 			head.y += 1;
 			break;
 	}
+
+	/*When the head position is the same as the energy block*/
+	for(i = 0; i < MAX_ENERGY_BLOCKS; i++)
+	{
+		if(head.x == energy_block[i].x && head.y == energy_block[i].y)
+		{
+			block_count += 1;
+		}
+	}
+	
 
   /* Check if head collided with border or itself */
   if(   head.x <= 0 || head.x >= NCOLS - 1
