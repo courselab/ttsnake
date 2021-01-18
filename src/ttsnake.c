@@ -348,6 +348,7 @@ void advance (char scene[][NROWS][NCOLS])
 		if(head.x == energy_block[i].x && head.y == energy_block[i].y)
 		{
 			block_count += 1;
+			energy_block[i].x = BLOCK_INACTIVE;
 		}
 	}
 	
