@@ -64,6 +64,7 @@ struct timeval beginning,	/* Time when game started. */
 int movie_delay;		/* How long between move scenes scenes. */
 int game_delay;			/* How long between game scenes. */
 int go_on; 			/* Whether to continue or to exit main loop.*/
+int player_lost;
 
 int block_count; 		/*Number of energy blocks collected */
 float score;     		/* Score: average blocks / time */
@@ -349,6 +350,15 @@ void advance (char scene[][NROWS][NCOLS])
 			break;
 	}
 
+  /* Check if head collided with border or itself */
+  if(   head.x <= 0 || head.x >= NCOLS - 1
+     || head.y <= 0 || head.y >= NROWS - 1
+     || scene[0][head.y][head.x] == SNAKE_BODY)
+  {
+      player_lost = 1;
+      return;
+  }
+
 	/* Advance snake in one step */
 	memmove(snake.positions, snake.positions + 1, sizeof(pair_t) * (snake.length-1));
 	snake.positions[snake.length - 1] = head;
@@ -399,6 +409,11 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
 
       advance (scene);		               /* Advance game.*/
 
+      if(player_lost){
+        /* TODO */
+        return;
+      }
+
       showscene (scene, k, 1);                /* Show k-th scene. */
       k = (k + 1) % N_GAME_SCENES;	      /* Circular buffer. */
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
@@ -429,6 +444,22 @@ void * userinput ()
     break;
     case 'q':
       kill (0, SIGINT);	/* Quit. */
+    break;
+    case 'w':
+      if(snake.direction != down)
+        snake.direction = up;
+    break;
+    case 'a':
+      if(snake.direction != right)
+        snake.direction = left;
+    break;
+    case 's':
+      if(snake.direction != up)
+        snake.direction = down;
+    break;
+    case 'd':
+      if(snake.direction != left)
+        snake.direction = right;
     break;
     default:
     break;
@@ -489,6 +520,7 @@ int main ()
   readscenes (SCENE_DIR_GAME, game_scene, N_GAME_SCENES);
 
   go_on=1;
+  player_lost=0;
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
