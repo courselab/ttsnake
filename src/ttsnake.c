@@ -92,7 +92,7 @@ struct snake_st
   pair_t head;			 /* The snake's head. */
   int length;			 /* The snake length (including head). */
   pair_t *positions;	/* Position of each body part of the snake. */
-  direction_t direction;	 /* Moviment direction. */
+  direction_t direction;	 /* Movement direction. */
 };
 
 snake_t snake;			/* The snake istance. */
@@ -268,7 +268,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 }
 
 
-  /* Instantiate the nake and a set of energy blocks. */
+  /* Instantiate the snake and a set of energy blocks. */
 
 /* Put above the showscene function so I could use it to display active blocks on current scene */
 /* #define BLOCK_INACTIVE -1 */
@@ -315,7 +315,43 @@ void init_game (char scene[][NROWS][NCOLS])
 
 }
 
-/* This functions adances the game. It computes the next state
+/* This function increases the snake's size by one.
+   It adds the new piece of the snake's body to the
+   first position of the vector, i.e., the new piece
+   becomes the snake's tail. However, since this function
+   is called after the snake has moved, the tail isn't 
+   erased from the screen, and the visual effect 
+   should be as if the new piece was added to the 
+   middle of the body, even though technically the new 
+   piece is added to the end of the body.
+ */
+
+void snake_snack(int tail_x, int tail_y)
+{	
+	pair_t *auxVector;
+	int i, auxCounter;
+
+	auxCounter = snake.length; /*Save the current length of the snake*/
+	snake.length++;/*Increase the length of the snake*/
+
+	auxVector = (pair_t *) malloc(auxCounter * sizeof(pair_t));/*allocate enough space*/
+	memmove(auxVector, snake.positions, auxCounter * sizeof(pair_t));/*save all snake positions*/
+
+	snake.positions =(pair_t*)realloc(snake.positions, sizeof(pair_t) * snake.length);/*Increase the size of the positions vector*/
+	snake.positions[0].y = tail_y;/*Add the new piece to the snake's body*/
+	snake.positions[0].x = tail_x;
+	
+	for(i = 0; i <  auxCounter; i++){/*Repopulate the snake.positions vector*/
+		snake.positions[i + 1].x = auxVector[i].x;
+		snake.positions[i + 1].y = auxVector[i].y;
+	}
+
+	free(auxVector);
+	return;
+}	
+
+
+/* This function advances the game. It computes the next state
    and updates the scene vector. This is Tron's game logic. */
 
 void advance (char scene[][NROWS][NCOLS])
@@ -324,7 +360,7 @@ void advance (char scene[][NROWS][NCOLS])
 	head = snake.positions[snake.length - 1];
 	tail = snake.positions[0];
 
-	int i;
+	int i, flag = 0;
 
 	/* Calculate next position of the head. */
 	switch(snake.direction){
@@ -348,6 +384,7 @@ void advance (char scene[][NROWS][NCOLS])
 		if(head.x == energy_block[i].x && head.y == energy_block[i].y)
 		{
 			block_count += 1;
+			flag = 1;
 		}
 	}
 	
@@ -365,8 +402,14 @@ void advance (char scene[][NROWS][NCOLS])
 	memmove(snake.positions, snake.positions + 1, sizeof(pair_t) * (snake.length-1));
 	snake.positions[snake.length - 1] = head;
 
-	/* Erase old position of the tail */
-	scene[0][tail.y][tail.x] = ' ';
+	/* Erase old position of the tail or add new piece to the snake */
+	if(flag == 0)
+	{	
+		scene[0][tail.y][tail.x] = ' ';
+	}else{
+		flag = 0;
+		snake_snack(tail.x, tail.y);
+	}
 
 	/* Draw new position of the head */
 	scene[0][head.y][head.x] = SNAKE_BODY;
