@@ -420,7 +420,7 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
         memcpy(&scene[1][27][30], buffer, strlen(buffer));
 
         showscene (scene, 1, 0); /* Show YOU ARE DEAD scene */
-        sleep(2); /* Sleeps for 2 secs. */
+        sleep(5);
         return;
       }
 
