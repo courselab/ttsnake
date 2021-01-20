@@ -241,9 +241,11 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
   memcpy (&before, &now, sizeof (struct timeval));
   gettimeofday (&now, NULL);
 
-  timeval_subtract (&elapsed_last, &now, &before);
+  if(!player_lost) {
+    timeval_subtract (&elapsed_last, &now, &before);
 
-  timeval_subtract (&elapsed_total, &now, &beginning);
+    timeval_subtract (&elapsed_total, &now, &beginning);
+  }
 
   /* Displays active energy blocks */
 
