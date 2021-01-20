@@ -65,6 +65,7 @@ int movie_delay;		/* How long between move scenes scenes. */
 int game_delay;			/* How long between game scenes. */
 int go_on; 			/* Whether to continue or to exit main loop.*/
 int player_lost;
+int restart_game; /* Whether the user has pressed to restart the game or not */
 
 int block_count; 		/*Number of energy blocks collected */
 float score;     		/* Score: average blocks / time */
@@ -266,7 +267,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
       printf ("Score: %.2f\r\n", score);
       printf ("Blocks: %d\r\n", block_count);  
 	  
-      printf ("Controls: q: quit\t\r\n");
+      printf ("Controls: q: quit\t\r\n\t  r: restart\t\r\n");
     }
 }
 
@@ -461,13 +462,21 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
         char buffer[128];
         sprintf(buffer, "%.2f", score);
         memcpy(&scene[1][27][30], buffer, strlen(buffer));
-
-        showscene (scene, 1, 0); /* Show YOU ARE DEAD scene */
-        sleep(5);
-        return;
       }
 
-      showscene (scene, 0, 1);                /* Show k-th scene. */
+      if(restart_game) {
+        /* Reset variables as at the beginning of the game */
+        go_on=1;
+        player_lost=0;
+        restart_game=0;
+        gettimeofday (&beginning, NULL);
+
+        clearscene(scene, N_GAME_SCENES);
+        init_game (scene);
+        readscenes (SCENE_DIR_GAME, scene, N_GAME_SCENES);
+      }
+
+      showscene (scene, player_lost, 1);                /* Show k-th scene. */
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	      /* Apply delay. */
     }
@@ -496,6 +505,9 @@ void * userinput ()
     break;
     case 'q':
       kill (0, SIGINT);	/* Quit. */
+    break;
+    case 'r':
+      restart_game = 1;	/* Restart game. */
     break;
     case 'w':
       if(snake.direction != down)
@@ -573,6 +585,7 @@ int main ()
 
   go_on=1;
   player_lost=0;
+  restart_game=0;
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
