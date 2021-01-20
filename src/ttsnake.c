@@ -150,7 +150,8 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
 	 reinstalle (program won't read them from project tree.)  */
       sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
 
-      printf ("Reading from %s\n", scenefile);
+      /* Dont know if the line was for debug or not, commenting it
+      printf ("Reading from %s\n", scenefile); */
       
       file = fopen (scenefile, "r");
       if(!file){
