@@ -270,7 +270,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
       printf ("Score: %.2f\r\n", score);
       printf ("Blocks: %d\r\n", block_count);  
 	  
-      printf ("Controls: q: quit\t\r\n\t  r: restart\t\r\n");
+      printf ("Controls: q: quit | r: restart\r\n");
     }
 }
 
