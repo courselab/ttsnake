@@ -33,7 +33,7 @@
 /* Game defaults */
 
 #define N_INTRO_SCENES 485	/* Number of frames of the intro animation.*/
-#define N_GAME_SCENES  1	/* Number of frames of the gamepay scnene. */
+#define N_GAME_SCENES  2	/* Number of frames of the gamepay scnene. */
 
 #define NCOLS 90		/* Number of columns of the scene. */
 #define NROWS 40		/* Number of rows of the scene. */
@@ -152,7 +152,10 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
       printf ("Reading from %s\n", scenefile);
       
       file = fopen (scenefile, "r");
-      sysfatal (!file);
+      if(!file){
+        endwin();
+        sysfatal (!file);
+      }
 
       /* Iterate through NROWS. */
 
@@ -441,7 +444,6 @@ void playmovie (char scene[N_INTRO_SCENES][NROWS][NCOLS])
 void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
 {
 
-  int k = 0;
   struct timespec how_long;
   how_long.tv_sec = 0;
 
@@ -455,12 +457,17 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
       advance (scene);		               /* Advance game.*/
 
       if(player_lost){
-        /* TODO */
+        /* Write score on the scene */
+        char buffer[128];
+        sprintf(buffer, "%.2f", score);
+        memcpy(&scene[1][27][30], buffer, strlen(buffer));
+
+        showscene (scene, 1, 0); /* Show YOU ARE DEAD scene */
+        sleep(5);
         return;
       }
 
-      showscene (scene, k, 1);                /* Show k-th scene. */
-      k = (k + 1) % N_GAME_SCENES;	      /* Circular buffer. */
+      showscene (scene, 0, 1);                /* Show k-th scene. */
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	      /* Apply delay. */
     }
