@@ -31,4 +31,4 @@ include $(srcdir)/intro.am
 
 # Data files are installed in $(distdir)/
 
-nobase_dist_DATA = $(intro_scenes) game/scene-0000001.txt 
+nobase_dist_DATA = $(intro_scenes) game/scene-0000001.txt game/scene-0000002.txt 
