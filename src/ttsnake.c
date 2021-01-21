@@ -479,7 +479,9 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
         readscenes (SCENE_DIR_GAME, scene, N_GAME_SCENES);
       }
 
+      /* Below is equivalent to 'showscene(scene, player_lost ? 1 : 0, 1);' but more efficient. */
       showscene (scene, player_lost, 1);                /* Show k-th scene. */
+
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	      /* Apply delay. */
     }
