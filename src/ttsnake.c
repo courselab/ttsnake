@@ -33,7 +33,7 @@
 /* Game defaults */
 
 #define N_INTRO_SCENES 485	/* Number of frames of the intro animation.*/
-#define N_GAME_SCENES  1	/* Number of frames of the gamepay scnene. */
+#define N_GAME_SCENES  2	/* Number of frames of the gamepay scnene. */
 
 #define NCOLS 90		/* Number of columns of the scene. */
 #define NROWS 40		/* Number of rows of the scene. */
@@ -44,7 +44,9 @@
 #define SCENE_DIR_INTRO "intro" /* Path to the intro animation scenes. */
 #define SCENE_DIR_GAME  "game"	/* Path to the game animation scene. */
 
-#define SNAKE_BODY       'O'     /* Character to draw the snake. */
+#define SNAKE_TAIL	 '.'	 /* Character to draw the snake tail. */
+#define SNAKE_BODY       'x'     /* Character to draw the snake body. */
+#define SNAKE_HEAD	 '0'	 /* Character to draw the snake head. */
 #define ENERGY_BLOCK     '+'	 /* Character to draw the energy block. */
 
 #define MAX_ENERGY_BLOCKS 5	/* Maximum number of energy blocks. */
@@ -63,7 +65,11 @@ struct timeval beginning,	/* Time when game started. */
 
 int movie_delay;		/* How long between move scenes scenes. */
 int game_delay;			/* How long between game scenes. */
-int go_on;			/* Whether to continue or to exit main loop.*/
+int go_on; 			/* Whether to continue or to exit main loop.*/
+int player_lost;
+
+int block_count; 		/*Number of energy blocks collected */
+float score;     		/* Score: average blocks / time */
 
 /* SIGINT handler. The variable go_on controls the main loop. */
 
@@ -88,7 +94,7 @@ struct snake_st
   pair_t head;			 /* The snake's head. */
   int length;			 /* The snake length (including head). */
   pair_t *positions;	/* Position of each body part of the snake. */
-  direction_t direction;	 /* Moviment direction. */
+  direction_t direction;	 /* Movement direction. */
 };
 
 snake_t snake;			/* The snake istance. */
@@ -148,7 +154,10 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
       printf ("Reading from %s\n", scenefile);
       
       file = fopen (scenefile, "r");
-      sysfatal (!file);
+      if(!file){
+        endwin();
+        sysfatal (!file);
+      }
 
       /* Iterate through NROWS. */
 
@@ -240,21 +249,31 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
   /* Displays active energy blocks */
 
   for (i=0; i<MAX_ENERGY_BLOCKS; i++)
-    if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].x][energy_block[i].y] = ENERGY_BLOCK;
+    if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].y][energy_block[i].x] = ENERGY_BLOCK;
 
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
+  
+  /*Calculate score based on time*/
+  if (elapsed_total.tv_sec != 0)
+  {
+    score = (block_count / (float) (elapsed_total.tv_sec));
+  }
 
   if (menu)
     {
       printf ("Elapsed: %5ds, fps=%5.2f\r\n", /* CR-LF because of ncurses. */
 	      (int) elapsed_total.tv_sec, fps);
+      /*Add to the menu score and blocks collected */	  
+      printf ("Score: %.2f\r\n", score);
+      printf ("Blocks: %d\r\n", block_count);  
+	  
       printf ("Controls: q: quit\t\r\n");
     }
 }
 
 
-  /* Instantiate the nake and a set of energy blocks. */
+  /* Instantiate the snake and a set of energy blocks. */
 
 /* Put above the showscene function so I could use it to display active blocks on current scene */
 /* #define BLOCK_INACTIVE -1 */
@@ -264,7 +283,10 @@ void init_game (char scene[][NROWS][NCOLS])
   int i;
 	
   srand(time(NULL));
-
+  /*Set initial score and blocks collected 0 */
+  score = 0;
+  block_count = 0;
+	
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
@@ -292,20 +314,61 @@ void init_game (char scene[][NROWS][NCOLS])
    /* Generate energy blocks away from the borders */
   for (i=0; i<MAX_ENERGY_BLOCKS; i++)
   {
-    energy_block[i].x = (rand() % (NROWS - 2)) + 1 ;
-    energy_block[i].y = (rand() % (NCOLS - 2)) + 1;
+    energy_block[i].x = (rand() % (NCOLS - 2)) + 1 ;
+    energy_block[i].y = (rand() % (NROWS - 2)) + 1;
   }
 
 }
 
-/* This functions adances the game. It computes the next state
+/* This function increases the snake's size by one.
+   It adds the new piece of the snake's body to the
+   first position of the vector, i.e., the new piece
+   becomes the snake's tail. However, since this function
+   is called after the snake has moved, the tail isn't 
+   erased from the screen, and the visual effect 
+   should be as if the new piece was added to the 
+   middle of the body, even though technically the new 
+   piece is added to the end of the body.
+ */
+
+void snake_snack(int tail_x, int tail_y)
+{	
+	pair_t *auxVector;
+	int i, auxCounter;
+
+	auxCounter = snake.length; /*Save the current length of the snake*/
+	snake.length++;/*Increase the length of the snake*/
+
+	auxVector = (pair_t *) malloc(auxCounter * sizeof(pair_t));/*allocate enough space*/
+	memmove(auxVector, snake.positions, auxCounter * sizeof(pair_t));/*save all snake positions*/
+
+	snake.positions =(pair_t*)realloc(snake.positions, sizeof(pair_t) * snake.length);/*Increase the size of the positions vector*/
+	snake.positions[0].y = tail_y;/*Add the new piece to the snake's body*/
+	snake.positions[0].x = tail_x;
+	
+	for(i = 0; i <  auxCounter; i++){/*Repopulate the snake.positions vector*/
+		snake.positions[i + 1].x = auxVector[i].x;
+		snake.positions[i + 1].y = auxVector[i].y;
+	}
+
+	free(auxVector);
+	return;
+}	
+
+
+/* This function advances the game. It computes the next state
    and updates the scene vector. This is Tron's game logic. */
 
 void advance (char scene[][NROWS][NCOLS])
 {
-	pair_t head, tail;
+	pair_t head, tail, last1_tail, last2_tail, body;
+	body = snake.positions[snake.length - 1];
 	head = snake.positions[snake.length - 1];
+	last1_tail = snake.positions[1];
+	last2_tail = snake.positions[2];
 	tail = snake.positions[0];
+
+	int i, flag = 0;
 
 	/* Calculate next position of the head. */
 	switch(snake.direction){
@@ -323,15 +386,46 @@ void advance (char scene[][NROWS][NCOLS])
 			break;
 	}
 
+	/*When the head position is the same as the energy block*/
+	for(i = 0; i < MAX_ENERGY_BLOCKS; i++)
+	{
+		if(head.x == energy_block[i].x && head.y == energy_block[i].y)
+		{
+			block_count += 1;
+			energy_block[i].x = BLOCK_INACTIVE;
+		}
+	}
+	
+
+  /* Check if head collided with border or itself */
+  if(   head.x <= 0 || head.x >= NCOLS - 1
+     || head.y <= 0 || head.y >= NROWS - 1
+     || scene[0][head.y][head.x] == SNAKE_BODY)
+  {
+      player_lost = 1;
+      return;
+  }
+
 	/* Advance snake in one step */
 	memmove(snake.positions, snake.positions + 1, sizeof(pair_t) * (snake.length-1));
 	snake.positions[snake.length - 1] = head;
 
-	/* Erase old position of the tail */
-	scene[0][tail.y][tail.x] = ' ';
+	/* Erase old position of the tail or add new piece to the snake */
+	if(flag == 0)
+	{	
+		scene[0][tail.y][tail.x] = ' ';
+	}else{
+		flag = 0;
+		snake_snack(tail.x, tail.y);
+	}
 
+	/* Draw new two position of the tail */
+	scene[0][last1_tail.y][last1_tail.x] = SNAKE_TAIL;
+	scene[0][last2_tail.y][last2_tail.x] = SNAKE_TAIL;
+	/* Draw new position of the body */
+	scene[0][body.y][body.x] = SNAKE_BODY;
 	/* Draw new position of the head */
-	scene[0][head.y][head.x] = SNAKE_BODY;
+	scene[0][head.y][head.x] = SNAKE_HEAD;
 }
 
 /* This function plays the game introduction animation. */
@@ -360,7 +454,6 @@ void playmovie (char scene[N_INTRO_SCENES][NROWS][NCOLS])
 void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
 {
 
-  int k = 0;
   struct timespec how_long;
   how_long.tv_sec = 0;
 
@@ -373,8 +466,18 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
 
       advance (scene);		               /* Advance game.*/
 
-      showscene (scene, k, 1);                /* Show k-th scene. */
-      k = (k + 1) % N_GAME_SCENES;	      /* Circular buffer. */
+      if(player_lost){
+        /* Write score on the scene */
+        char buffer[128];
+        sprintf(buffer, "%.2f", score);
+        memcpy(&scene[1][27][30], buffer, strlen(buffer));
+
+        showscene (scene, 1, 0); /* Show YOU ARE DEAD scene */
+        sleep(5);
+        return;
+      }
+
+      showscene (scene, 0, 1);                /* Show k-th scene. */
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	      /* Apply delay. */
     }
@@ -403,6 +506,22 @@ void * userinput ()
     break;
     case 'q':
       kill (0, SIGINT);	/* Quit. */
+    break;
+    case 'w':
+      if(snake.direction != down)
+        snake.direction = up;
+    break;
+    case 'a':
+      if(snake.direction != right)
+        snake.direction = left;
+    break;
+    case 's':
+      if(snake.direction != up)
+        snake.direction = down;
+    break;
+    case 'd':
+      if(snake.direction != left)
+        snake.direction = right;
     break;
     default:
     break;
@@ -463,6 +582,7 @@ int main ()
   readscenes (SCENE_DIR_GAME, game_scene, N_GAME_SCENES);
 
   go_on=1;
+  player_lost=0;
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
