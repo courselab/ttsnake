@@ -9,17 +9,34 @@
  INSTALL
  --------------------------------------------------
 
- * Quick instructions:
+ Quick instructions:
 
- If you have obtained the project source from the version control repository
- 
+ * If you have obtained the project source from the version control repository
+
+Excute the script 
+
  ```
  $ ./autogen.sh
+ ```
+
+to boostrap the build configuration scripts `configure`. You'll need GNU Build
+System (Autotools) installed. In debian/ubuntu based plataforms, you may
+install required software with
+
+```
+sudo apt install automake autoconf
+```
+
+* If you have either obtanied the project from a distribution repository or
+bootstraped the build system as described above, and already have the build
+configuration script `configure`, then execute it
+
+```
  $ ./configure
  $ make
  ```
  
- Alternatively, if you have obtained the source from a distribution tarball,
+*  Alternatively, if you have obtained the source from a distribution tarball,
  you should already have the configuration script pre-built. In this case,
  you may skip evoking autotools and use just
 
@@ -28,6 +45,7 @@
  $ ./configure
  $ make
 ```
+
  Optionally, if you wish to build and install the software under /tmp/foo
 
 ```
@@ -35,6 +53,8 @@
  $ make
  $ make install
 ```
+
+## Notes
 
  Scene files are installed under` $(prefix)/share/textronsnake`.
 
