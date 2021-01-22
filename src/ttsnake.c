@@ -44,7 +44,9 @@
 #define SCENE_DIR_INTRO "intro" /* Path to the intro animation scenes. */
 #define SCENE_DIR_GAME  "game"	/* Path to the game animation scene. */
 
-#define SNAKE_BODY       'O'     /* Character to draw the snake. */
+#define SNAKE_TAIL	 '.'	 /* Character to draw the snake tail. */
+#define SNAKE_BODY       'x'     /* Character to draw the snake body. */
+#define SNAKE_HEAD	 '0'	 /* Character to draw the snake head. */
 #define ENERGY_BLOCK     '+'	 /* Character to draw the energy block. */
 
 #define MAX_ENERGY_BLOCKS 5	/* Maximum number of energy blocks. */
@@ -363,8 +365,14 @@ void snake_snack(int tail_x, int tail_y)
 
 void advance (char scene[][NROWS][NCOLS])
 {
-	pair_t head, tail;
+	pair_t head, tail, last1_tail, last2_tail, body;
+	/* Setting the body position. */
+	body = snake.positions[snake.length - 1];
+	/* Setting the head position. */
 	head = snake.positions[snake.length - 1];
+	/* Setting the tail position. */
+	last1_tail = snake.positions[1];
+	last2_tail = snake.positions[2];
 	tail = snake.positions[0];
 
 	int i, flag = 0;
@@ -419,8 +427,13 @@ void advance (char scene[][NROWS][NCOLS])
 		snake_snack(tail.x, tail.y);
 	}
 
+	/* Draw new two position of the tail */
+	scene[0][last1_tail.y][last1_tail.x] = SNAKE_TAIL;
+	scene[0][last2_tail.y][last2_tail.x] = SNAKE_TAIL;
+	/* Draw new position of the body */
+	scene[0][body.y][body.x] = SNAKE_BODY;
 	/* Draw new position of the head */
-	scene[0][head.y][head.x] = SNAKE_BODY;
+	scene[0][head.y][head.x] = SNAKE_HEAD;
 }
 
 /* This function plays the game introduction animation. */
