@@ -115,7 +115,11 @@ struct
 
 */
 
-void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
+/* All chars of one single scene. */
+
+typedef char scene_t[NROWS][NCOLS];
+
+void readscenes (char *dir, scene_t* scene, int nscenes)
 {
   int i, j, k;
   FILE *file;
@@ -194,7 +198,7 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
    issuing a single 'write' call for each line. Would this yield any significant
    performance improvement? */
 
-void draw (char scene[][NROWS][NCOLS], int number)
+void draw (scene_t* scene, int number)
 {
   int i, j;
   for (i=0; i<NROWS; i++)
@@ -212,7 +216,7 @@ void draw (char scene[][NROWS][NCOLS], int number)
 
 /* Draw scene indexed by number, get some statics and repeat.
    If meny is true, draw the game controls.*/
-void showscene (char scene[][NROWS][NCOLS], int number, int menu)
+void showscene (scene_t* scene, int number, int menu)
 {
   double fps;
   int i;
@@ -262,7 +266,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 /* Put above the showscene function so I could use it to display active blocks on current scene */
 /* #define BLOCK_INACTIVE -1 */
 
-void init_game (char scene[][NROWS][NCOLS])
+void init_game (scene_t* scene)
 {
   int i;
 	
@@ -343,7 +347,7 @@ void snake_snack(int tail_x, int tail_y)
 /* This function advances the game. It computes the next state
    and updates the scene vector. This is Tron's game logic. */
 
-void advance (char scene[][NROWS][NCOLS])
+void advance (scene_t* scene)
 {
 	pair_t head, tail, last1_tail, last2_tail, body;
 	/* Setting the body position. */
@@ -418,7 +422,7 @@ void advance (char scene[][NROWS][NCOLS])
 
 /* This function plays the game introduction animation. */
 
-void playmovie (char scene[N_INTRO_SCENES][NROWS][NCOLS])
+void playmovie (scene_t* scene)
 {
 
   int k = 0, i;
@@ -439,7 +443,7 @@ void playmovie (char scene[N_INTRO_SCENES][NROWS][NCOLS])
 
 /* This function implements the gameplay loop. */
 
-void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
+void playgame (scene_t* scene)
 {
 
   struct timespec how_long;
@@ -537,8 +541,8 @@ int main ()
   struct sigaction act;
   int rs;
   pthread_t pthread;
-  char intro_scene[N_INTRO_SCENES][NROWS][NCOLS];
-  char game_scene[N_GAME_SCENES][NROWS][NCOLS];
+  scene_t intro_scene[N_INTRO_SCENES];
+  scene_t game_scene[N_GAME_SCENES];
 
   /* Handle SIGNINT (loop control flag). */
 
