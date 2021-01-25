@@ -541,8 +541,8 @@ int main ()
   struct sigaction act;
   int rs;
   pthread_t pthread;
-  scene_t intro_scene[N_INTRO_SCENES];
-  scene_t game_scene[N_GAME_SCENES];
+  scene_t* intro_scene = malloc(sizeof(*intro_scene) * N_INTRO_SCENES);
+  scene_t* game_scene = malloc(sizeof(*game_scene) * N_GAME_SCENES);
 
   /* Handle SIGNINT (loop control flag). */
 
