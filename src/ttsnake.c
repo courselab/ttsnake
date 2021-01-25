@@ -208,70 +208,77 @@ int readscenes (char *dir, scene_t** scene, int nscenes)
   /* Read nscenes. */
 
   for (k=0; k<nscenes; k++)
+  {
+
+    /* Program always read scenes from the installed data path (DATADIR, e.g.
+       /usr/share/<dir>. Therefore, if scenes are modified, they should be
+       reinstalle (program won't read them from project tree.)  */
+    sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
+
+    /* Dont know if the line was for debug or not, commenting it
+    printf ("Reading from %s\n", scenefile); */
+    
+    file = fopen (scenefile, "r");
+    if (!file)
     {
-
-      /* Program always read scenes from the installed data path (DATADIR, e.g.
-	 /usr/share/<dir>. Therefore, if scenes are modified, they should be
-	 reinstalle (program won't read them from project tree.)  */
-      sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
-
-      /* Dont know if the line was for debug or not, commenting it
-      printf ("Reading from %s\n", scenefile); */
-      
-      file = fopen (scenefile, "r");
-      if (!file)
-      {
-        if (allocate)
-          free(*scene);
-        endwin();
-        sysfatal (!file);
-      }
-
-      /* Iterate through NROWS. */
-
-      for (i=0; i<NROWS; i++)
-      	{
-
-	  /* Read NCOLS columns from row i.*/
-
-      	  for (j=0; j<NCOLS; j++)
-	    {
-
-	      /* Actual ascii text file may be smaller than NROWS x NCOLS.
-		 If we read something out of the 32-127 ascii range,
-		 consider a blank instead.*/
-
-	      c = (char) fgetc (file);
-	      (*scene)[k][i][j] = ((c>=' ') && (c<='~')) ? c : BLANK;
-
-
-	      /* Draw border. */
-
-	      if (j==0)
-		(*scene)[k][i][j] = '|';
-	      else
-		if (j==NCOLS-1)
-		  (*scene)[k][i][j] = '|';
-
-	      if (i==0)
-		(*scene)[k][i][j] = '-';
-	      else
-		if (i==NROWS-1)
-		  (*scene)[k][i][j] = '-';
-	    }
-
-
-	  /* Discard the rest of the line (if longer than NCOLS). */
-
-      	  while (((c = fgetc(file)) != '\n') && (c != EOF));
-
-      	}
-
-      fclose (file);
-
+      if (allocate)
+        free(*scene);
+      endwin();
+      sysfatal (!file);
     }
 
-    return k;
+    /* Write up and down borders and correct stream position of
+       up border.*/
+
+    for (j=0; j<NCOLS; j++)
+    {
+      (*scene)[k][0][j] = '-';
+      (*scene)[k][NROWS-1][j] = '-';
+    }
+
+    fseek(file, sizeof(char) * NCOLS, SEEK_CUR);
+    while (((c = fgetc(file)) != '\n') && (c != EOF));
+
+    /* Iterate through NROWS. */
+
+    for (i=1; i<NROWS-1; i++)
+  	{
+
+      /* Write left border and correct stream position */
+
+      (*scene)[k][i][0] = '|';
+      fseek(file, sizeof(char), SEEK_CUR);
+
+      /* Read NCOLS columns from row i.*/
+
+  	  for (j=1; j<NCOLS-1; j++)
+      {
+
+        /* Actual ascii text file may be smaller than NROWS x NCOLS.
+           If we read something out of the 32-127 ascii range,
+           consider a blank instead.*/
+
+        c = (char) fgetc (file);
+        (*scene)[k][i][j] = ((c>=' ') && (c<='~')) ? c : BLANK;
+      }
+
+      /* Write right border and correct stream position */
+
+      (*scene)[k][i][NCOLS-1] = '|';
+      fseek(file, sizeof(char), SEEK_CUR);
+
+
+      /* Discard the rest of the line (if longer than NCOLS). */
+
+  	  while (((c = fgetc(file)) != '\n') && (c != EOF));
+
+  	}
+
+  fclose (file);
+
+  }
+
+  return k;
 }
 
 
