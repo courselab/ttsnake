@@ -182,6 +182,11 @@ int countfiles(char* dir)
   #undef SFOPEN
 }
 
+/* Read all the scenes in the 'dir' directory, save it in 'scene' and
+   return the number of readed scenes. If zero is passed as nscenes,
+   then calculate the actual number and allocate appropriate space in
+   scene. */
+
 int readscenes (char *dir, scene_t** scene, int nscenes)
 {
   int i, j, k;
