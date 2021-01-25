@@ -108,26 +108,6 @@ struct
   int y;			/* Coordinate y of the energy block. */
 } energy_block[MAX_ENERGY_BLOCKS]; /* Array of energy blocks. */
 
-
-/* Clear the scene vector.
-
-   The scene vector is an array of nscenes matrixes of
-   NROWS x NCOLS chars, containg the ascii image.
-*/
-
-void clearscene (char scene[][NROWS][NCOLS], int nscenes)
-{
-  int i, j, k;
-
-  /* Fill the ncenes matrixes with blaks. */
-
-  for (k=0; k<nscenes; k++)
-    for (i=0; i<NROWS; i++)
-      for (j=0; j<NCOLS; j++)
-	scene[k][i][j] = BLANK;
-
- }
-
 /* Load all scenes from dir into the scene vector.
 
    The scene vector is an array of nscenes matrixes of
@@ -488,7 +468,6 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
         restart_game=0;
         gettimeofday (&beginning, NULL);
 
-        clearscene(scene, N_GAME_SCENES);
         init_game (scene);
         readscenes (SCENE_DIR_GAME, scene, N_GAME_SCENES);
       }
@@ -588,8 +567,6 @@ int main ()
 
   /* Play intro. */
 
-  clearscene(intro_scene, N_INTRO_SCENES);
-
   readscenes (SCENE_DIR_INTRO, intro_scene, N_INTRO_SCENES);
 
   go_on=1;			/* User may skip intro (q). */
@@ -597,8 +574,6 @@ int main ()
   playmovie (intro_scene);
 
   /* Play game. */
-
-  clearscene(intro_scene, N_GAME_SCENES);
 
   readscenes (SCENE_DIR_GAME, game_scene, N_GAME_SCENES);
 
