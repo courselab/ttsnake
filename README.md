@@ -74,9 +74,10 @@ configuration script `configure`, then execute it
  The program will load scene files from the scenes directory.
 
  Controls:
-
+	WASD to control the snake
 	+ decreases the game speed
 	- increases the game speed 
 	q quits
+	r at anytime to restart the game
 
 

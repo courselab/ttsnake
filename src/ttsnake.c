@@ -49,7 +49,7 @@
 #define SNAKE_HEAD	 '0'	 /* Character to draw the snake head. */
 #define ENERGY_BLOCK     '+'	 /* Character to draw the energy block. */
 
-#define MAX_ENERGY_BLOCKS 5	/* Maximum number of energy blocks. */
+#define MAX_ENERGY_BLOCKS 3	/* Maximum number of energy blocks. */
 
 #define MIN_GAME_DELAY 10200
 #define MAX_GAME_DELAY 94000
@@ -272,11 +272,40 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
       printf ("Score: %.2f\r\n", score);
       printf ("Blocks: %d\r\n", block_count);  
 	  
-      printf ("Controls: q: quit | r: restart\r\n");
+      printf ("Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\r\n");
     }
 }
 
 
+/*This function generates a new set of energy blocks.
+  there are checks to prevent it from spawning blocks
+  on top of the borders and on top of the snake. It is called
+  every MAX_ENERGY_BLOCKS-th block eaten*/
+void more_snacks(){
+   /* Generate energy blocks away from the borders and the snake */
+ 	int i = 0, j = 0, isValid;
+	/*We generate a new block and check it against every piece of the snake.
+	 if the block is on top of the snake, then we generate a new position
+	 for it. Otherwise, we go to the next block and do it again.*/
+    	do
+  	{
+  	  isValid = 1;
+	  energy_block[i].x = (rand() % (NCOLS - 2)) + 1;
+  	  energy_block[i].y = (rand() % (NROWS - 2)) + 1;
+	  for(j = 0; j < snake.length;j++){
+		  if(energy_block[i].x == snake.positions[j].x && energy_block[i].y == snake.positions[j].y){
+			  isValid = 0;
+			  break;
+		  }
+	  }
+	  if(isValid == 1){
+		  i++;
+	  }
+
+  	}while(i < MAX_ENERGY_BLOCKS);
+        
+	return;
+}
   /* Instantiate the snake and a set of energy blocks. */
 
 /* Put above the showscene function so I could use it to display active blocks on current scene */
@@ -401,6 +430,9 @@ void advance (char scene[][NROWS][NCOLS])
 			block_count += 1;
 			flag = 1;
 			energy_block[i].x = BLOCK_INACTIVE;
+			if(block_count%MAX_ENERGY_BLOCKS == 0){
+			       	more_snacks();
+			}
 		}
 	}
 	
