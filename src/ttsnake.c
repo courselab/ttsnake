@@ -32,7 +32,6 @@
 
 /* Game defaults */
 
-#define N_INTRO_SCENES 485	/* Number of frames of the intro animation.*/
 #define N_GAME_SCENES  2	/* Number of frames of the gamepay scnene. */
 
 #define NCOLS 90		/* Number of columns of the scene. */
@@ -119,15 +118,90 @@ struct
 
 typedef char scene_t[NROWS][NCOLS];
 
-void readscenes (char *dir, scene_t* scene, int nscenes)
+/* Count how many scene files exist in the given directory and returns this number one.
+   Complexity: O(log(n)) */
+
+int countfiles(char* dir)
+{
+  FILE* file;
+  char scenefile[1024];
+  int k = 1, l;
+
+  #define SFOPEN(file) \
+  sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k); \
+  file = fopen (scenefile, "r");
+
+  /* Check if there are any file at all. */
+
+  SFOPEN(file);
+
+  if (!file)
+    return 1;
+
+  /* Double k until find a superior limit for files number. */
+
+  do 
+  {
+    k *= 2;
+
+    fclose(file);
+    SFOPEN(file);
+  }
+  while (file);
+
+  /* Binary search in the interval (k/2, k). */
+
+  l = k / 8;
+  for (k -= k / 4; l > 0; l /= 2)
+  {
+    SFOPEN(file);
+
+    if (file)
+    {
+      k += l;
+      fclose(file);
+    }
+
+    else
+      k -= l;
+  }
+
+  /* Ensure that last step k is the last number for what there is a file. */
+
+  SFOPEN(file);
+
+  if (file)
+    {
+      return k;
+      fclose(file);
+    }
+
+  else
+    return k - 1;
+
+  #undef SFOPEN
+}
+
+int readscenes (char *dir, scene_t** scene, int nscenes)
 {
   int i, j, k;
   FILE *file;
-  char scenefile[1024], c;
+  char scenefile[1024], c, allocate = false;
+
+  if (nscenes == 0)
+  {
+    nscenes = countfiles(dir);
+    if (nscenes == 0)
+    {
+        endwin();
+        sysfatal (nscenes == 0);
+    }
+    *scene = malloc(sizeof(**scene) * nscenes);
+    allocate = true;
+  }
 
   /* Read nscenes. */
 
-  i=0;
   for (k=0; k<nscenes; k++)
     {
 
@@ -140,7 +214,10 @@ void readscenes (char *dir, scene_t* scene, int nscenes)
       printf ("Reading from %s\n", scenefile); */
       
       file = fopen (scenefile, "r");
-      if(!file){
+      if (!file)
+      {
+        if (allocate)
+          free(*scene);
         endwin();
         sysfatal (!file);
       }
@@ -160,22 +237,22 @@ void readscenes (char *dir, scene_t* scene, int nscenes)
 		 consider a blank instead.*/
 
 	      c = (char) fgetc (file);
-	      scene[k][i][j] = ((c>=' ') && (c<='~')) ? c : BLANK;
+	      (*scene)[k][i][j] = ((c>=' ') && (c<='~')) ? c : BLANK;
 
 
 	      /* Draw border. */
 
 	      if (j==0)
-		scene[k][i][j] = '|';
+		(*scene)[k][i][j] = '|';
 	      else
 		if (j==NCOLS-1)
-		  scene[k][i][j] = '|';
+		  (*scene)[k][i][j] = '|';
 
 	      if (i==0)
-		scene[k][i][j] = '-';
+		(*scene)[k][i][j] = '-';
 	      else
 		if (i==NROWS-1)
-		  scene[k][i][j] = '-';
+		  (*scene)[k][i][j] = '-';
 	    }
 
 
@@ -189,6 +266,7 @@ void readscenes (char *dir, scene_t* scene, int nscenes)
 
     }
 
+    return k;
 }
 
 
@@ -422,19 +500,18 @@ void advance (scene_t* scene)
 
 /* This function plays the game introduction animation. */
 
-void playmovie (scene_t* scene)
+void playmovie (scene_t* scene, int nscenes)
 {
 
-  int k = 0, i;
+  int k;
   struct timespec how_long;
   how_long.tv_sec = 0;
 
-  for (i=0; (i < N_INTRO_SCENES) && (go_on); i++)
+  for (k=0; (k < nscenes) && (go_on); k++)
     {
       clear ();			               /* Clear screen.    */
       refresh ();			       /* Refresh screen.  */
       showscene (scene, k, 0);                 /* Show k-th scene .*/
-      k = (k + 1) % N_INTRO_SCENES;            /* Circular buffer. */
       how_long.tv_nsec = (movie_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	       /* Apply delay. */
     }
@@ -473,7 +550,7 @@ void playgame (scene_t* scene)
         gettimeofday (&beginning, NULL);
 
         init_game (scene);
-        readscenes (SCENE_DIR_GAME, scene, N_GAME_SCENES);
+        readscenes (SCENE_DIR_GAME, &scene, N_GAME_SCENES);
       }
 
       /* Below is equivalent to 'showscene(scene, player_lost ? 1 : 0, 1);' but more efficient. */
@@ -540,8 +617,9 @@ int main ()
 {
   struct sigaction act;
   int rs;
+  int nscenes;
   pthread_t pthread;
-  scene_t* intro_scene = malloc(sizeof(*intro_scene) * N_INTRO_SCENES);
+  scene_t* intro_scene;
   scene_t* game_scene = malloc(sizeof(*game_scene) * N_GAME_SCENES);
 
   /* Handle SIGNINT (loop control flag). */
@@ -571,15 +649,15 @@ int main ()
 
   /* Play intro. */
 
-  readscenes (SCENE_DIR_INTRO, intro_scene, N_INTRO_SCENES);
+  nscenes = readscenes (SCENE_DIR_INTRO, &intro_scene, 0);
 
   go_on=1;			/* User may skip intro (q). */
 
-  playmovie (intro_scene);
+  playmovie (intro_scene, nscenes);
 
   /* Play game. */
 
-  readscenes (SCENE_DIR_GAME, game_scene, N_GAME_SCENES);
+  readscenes (SCENE_DIR_GAME, &game_scene, N_GAME_SCENES);
 
   go_on=1;
   player_lost=0;
