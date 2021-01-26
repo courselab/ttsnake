@@ -68,6 +68,14 @@ int go_on; 			/* Whether to continue or to exit main loop.*/
 int player_lost;
 int restart_game; /* Whether the user has pressed to restart the game or not */
 int on_settings; /* Whether the user is currently changing settings */
+int max_energy_blocks; /* Max number of energy blocks to display at once */
+
+enum settings_t {
+  ST_MAX_ENERGY = 0,    /* '= 0' ensures sequential counting from 0 */
+  ST_COUNT
+};
+
+int which_setting; /* Which setting the player is currently configuring */
 
 int block_count; 		/*Number of energy blocks collected */
 float score;     		/* Score: average blocks / time */
@@ -563,6 +571,19 @@ void playmovie (scene_t* scene, int nscenes)
     }
 }
 
+void draw_settings(scene_t *scene){
+  char buffer[NCOLS];
+  int i;
+
+  /* clean buffer */
+  for(i = 0; i < NCOLS; i++)
+    buffer[i] = ' ';
+
+  sprintf(buffer, "%.15s %c %3d %c     Maximum number of blocks to display at the same time.",
+          "", which_setting == 0 ? '<' : ' ', max_energy_blocks, which_setting == 0 ? '>' : ' ');
+  memcpy(&scene[2][22][12], buffer, strlen(buffer));
+}
+
 
 /* This function implements the gameplay loop. */
 
@@ -580,7 +601,12 @@ void playgame (scene_t* scene)
       refresh ();			      /* Refresh screen. */
 
       if(!on_settings)
+      {
         advance (scene);		               /* Advance game.*/
+      } else
+      {
+        draw_settings(scene);
+      }
 
       if(player_lost){
         /* Write score on the scene */
@@ -629,9 +655,38 @@ void * userinput ()
           on_settings=0;
           restart_game=1;
         break;
+        case 'w':
+          which_setting -= 1;
+        break;
+        case 's':
+          which_setting += 1;
+        break;
+        case 'a':
+          if(which_setting == ST_MAX_ENERGY){
+            max_energy_blocks -= 1;
+          }
+        break;
+        case 'd':
+          if(which_setting == ST_MAX_ENERGY){
+            max_energy_blocks += 1;
+          }
+        break;
         default:
         break;
       }
+
+      /* Checks validity of the settings */
+      if(which_setting < 0)
+        which_setting = 0;
+
+      if(which_setting >= ST_COUNT)
+        which_setting = ST_COUNT - 1;
+
+      if(max_energy_blocks < 0)
+        max_energy_blocks = 0;
+
+      if(max_energy_blocks > 50)
+          max_energy_blocks = 50;
     } else {
       switch (c)
       {
@@ -666,6 +721,7 @@ void * userinput ()
           snake.direction = right;
       break;
       case 'h':
+        which_setting = 0;
         on_settings = 1; /* Begin settings */
         break;
       default:
@@ -710,6 +766,7 @@ int main ()
 
   movie_delay = 1E5 / 4;	  /* Movie frame duration in usec (40usec) */
   game_delay  = 1E6 / 4;	  /* Game frame duration in usec (4usec) */
+  max_energy_blocks = 3;
 
 
   /* Handle game controls in a different thread. */
