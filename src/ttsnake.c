@@ -48,7 +48,7 @@
 #define SNAKE_HEAD	 '0'	 /* Character to draw the snake head. */
 #define ENERGY_BLOCK     '+'	 /* Character to draw the energy block. */
 
-#define MAX_ENERGY_BLOCKS 3	/* Maximum number of energy blocks. */
+#define MAX_ENERGY_BLOCKS_LIMIT 50	/* Limit on the maximum number of energy blocks. */
 
 #define MIN_GAME_DELAY 10200
 #define MAX_GAME_DELAY 94000
@@ -114,7 +114,7 @@ struct
 {
   int x;			/* Coordinate x of the energy block. */
   int y;			/* Coordinate y of the energy block. */
-} energy_block[MAX_ENERGY_BLOCKS]; /* Array of energy blocks. */
+} energy_block[MAX_ENERGY_BLOCKS_LIMIT]; /* Array of energy blocks. */
 
 /* Load all scenes from dir into the scene vector.
 
@@ -333,11 +333,9 @@ void showscene (scene_t* scene, int number, int menu)
     timeval_subtract (&elapsed_total, &now, &beginning);
   }
 
-  /* Displays active energy blocks */
-
-  for (i=0; i<MAX_ENERGY_BLOCKS; i++)
-    if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].y][energy_block[i].x] = ENERGY_BLOCK;
-
+  for (i=0; i<max_energy_blocks; i++)
+    if(energy_block[i].x != BLOCK_INACTIVE)
+        scene[number][energy_block[i].y][energy_block[i].x] = ENERGY_BLOCK;
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
   
@@ -364,7 +362,7 @@ void showscene (scene_t* scene, int number, int menu)
 /*This function generates a new set of energy blocks.
   there are checks to prevent it from spawning blocks
   on top of the borders and on top of the snake. It is called
-  every MAX_ENERGY_BLOCKS-th block eaten*/
+  every max_energy_blocks-th block eaten*/
 void more_snacks(){
    /* Generate energy blocks away from the borders and the snake */
  	int i = 0, j = 0, isValid;
@@ -386,7 +384,7 @@ void more_snacks(){
 		  i++;
 	  }
 
-  	}while(i < MAX_ENERGY_BLOCKS);
+  	} while(i < max_energy_blocks);
         
 	return;
 }
@@ -429,7 +427,7 @@ void init_game (scene_t* scene)
 	}
 
    /* Generate energy blocks away from the borders */
-  for (i=0; i<MAX_ENERGY_BLOCKS; i++)
+  for (i=0; i<max_energy_blocks; i++)
   {
     energy_block[i].x = (rand() % (NCOLS - 2)) + 1 ;
     energy_block[i].y = (rand() % (NROWS - 2)) + 1;
@@ -507,14 +505,14 @@ void advance (scene_t* scene)
 	}
 
 	/*When the head position is the same as the energy block*/
-	for(i = 0; i < MAX_ENERGY_BLOCKS; i++)
+	for(i = 0; i < max_energy_blocks; i++)
 	{
 		if(head.x == energy_block[i].x && head.y == energy_block[i].y)
 		{
 			block_count += 1;
 			flag = 1;
 			energy_block[i].x = BLOCK_INACTIVE;
-			if(block_count%MAX_ENERGY_BLOCKS == 0){
+			if(block_count%max_energy_blocks== 0){
 			       	more_snacks();
 			}
 		}
@@ -600,11 +598,9 @@ void playgame (scene_t* scene)
       clear ();                               /* Clear screen. */
       refresh ();			      /* Refresh screen. */
 
-      if(!on_settings)
-      {
+      if(!on_settings) {
         advance (scene);		               /* Advance game.*/
-      } else
-      {
+      } else {
         draw_settings(scene);
       }
 
@@ -685,8 +681,8 @@ void * userinput ()
       if(max_energy_blocks < 0)
         max_energy_blocks = 0;
 
-      if(max_energy_blocks > 50)
-          max_energy_blocks = 50;
+      if(max_energy_blocks > MAX_ENERGY_BLOCKS_LIMIT)
+          max_energy_blocks = MAX_ENERGY_BLOCKS_LIMIT;
     } else {
       switch (c)
       {
