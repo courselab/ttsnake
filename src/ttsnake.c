@@ -32,7 +32,6 @@
 
 /* Game defaults */
 
-#define N_INTRO_SCENES 485	/* Number of frames of the intro animation.*/
 #define N_GAME_SCENES  2	/* Number of frames of the gamepay scnene. */
 
 #define NCOLS 90		/* Number of columns of the scene. */
@@ -108,26 +107,6 @@ struct
   int y;			/* Coordinate y of the energy block. */
 } energy_block[MAX_ENERGY_BLOCKS]; /* Array of energy blocks. */
 
-
-/* Clear the scene vector.
-
-   The scene vector is an array of nscenes matrixes of
-   NROWS x NCOLS chars, containg the ascii image.
-*/
-
-void clearscene (char scene[][NROWS][NCOLS], int nscenes)
-{
-  int i, j, k;
-
-  /* Fill the ncenes matrixes with blaks. */
-
-  for (k=0; k<nscenes; k++)
-    for (i=0; i<NROWS; i++)
-      for (j=0; j<NCOLS; j++)
-	scene[k][i][j] = BLANK;
-
- }
-
 /* Load all scenes from dir into the scene vector.
 
    The scene vector is an array of nscenes matrixes of
@@ -135,76 +114,171 @@ void clearscene (char scene[][NROWS][NCOLS], int nscenes)
 
 */
 
-void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
+/* All chars of one single scene. */
+
+typedef char scene_t[NROWS][NCOLS];
+
+/* Count how many scene files exist in the given directory and returns this number one.
+   Complexity: O(log(n)) */
+
+int countfiles(char* dir)
+{
+  FILE* file;
+  char scenefile[1024];
+  int k = 1, l;
+
+  #define SFOPEN(file) \
+  sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k); \
+  file = fopen (scenefile, "r");
+
+  /* Check if there are any file at all. */
+
+  SFOPEN(file);
+
+  if (!file)
+    return 1;
+
+  /* Double k until find a superior limit for files number. */
+
+  do 
+  {
+    k *= 2;
+
+    fclose(file);
+    SFOPEN(file);
+  }
+  while (file);
+
+  /* Binary search in the interval (k/2, k). */
+
+  l = k / 8;
+  for (k -= k / 4; l > 0; l /= 2)
+  {
+    SFOPEN(file);
+
+    if (file)
+    {
+      k += l;
+      fclose(file);
+    }
+
+    else
+      k -= l;
+  }
+
+  /* Ensure that last step k is the last number for what there is a file. */
+
+  SFOPEN(file);
+
+  if (file)
+    {
+      return k;
+      fclose(file);
+    }
+
+  else
+    return k - 1;
+
+  #undef SFOPEN
+}
+
+/* Read all the scenes in the 'dir' directory, save it in 'scene' and
+   return the number of readed scenes. If zero is passed as nscenes,
+   then calculate the actual number and allocate appropriate space in
+   scene. */
+
+int readscenes (char *dir, scene_t** scene, int nscenes)
 {
   int i, j, k;
   FILE *file;
-  char scenefile[1024], c;
+  char scenefile[1024], c, allocate = false;
+
+  if (nscenes == 0)
+  {
+    nscenes = countfiles(dir);
+    if (nscenes == 0)
+    {
+        endwin();
+        sysfatal (nscenes == 0);
+    }
+    *scene = malloc(sizeof(**scene) * nscenes);
+    allocate = true;
+  }
 
   /* Read nscenes. */
 
-  i=0;
   for (k=0; k<nscenes; k++)
+  {
+
+    /* Program always read scenes from the installed data path (DATADIR, e.g.
+       /usr/share/<dir>. Therefore, if scenes are modified, they should be
+       reinstalle (program won't read them from project tree.)  */
+    sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
+
+    /* Dont know if the line was for debug or not, commenting it
+    printf ("Reading from %s\n", scenefile); */
+    
+    file = fopen (scenefile, "r");
+    if (!file)
     {
-
-      /* Program always read scenes from the installed data path (DATADIR, e.g.
-	 /usr/share/<dir>. Therefore, if scenes are modified, they should be
-	 reinstalle (program won't read them from project tree.)  */
-      sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
-
-      /* Dont know if the line was for debug or not, commenting it
-      printf ("Reading from %s\n", scenefile); */
-      
-      file = fopen (scenefile, "r");
-      if(!file){
-        endwin();
-        sysfatal (!file);
-      }
-
-      /* Iterate through NROWS. */
-
-      for (i=0; i<NROWS; i++)
-      	{
-
-	  /* Read NCOLS columns from row i.*/
-
-      	  for (j=0; j<NCOLS; j++)
-	    {
-
-	      /* Actual ascii text file may be smaller than NROWS x NCOLS.
-		 If we read something out of the 32-127 ascii range,
-		 consider a blank instead.*/
-
-	      c = (char) fgetc (file);
-	      scene[k][i][j] = ((c>=' ') && (c<='~')) ? c : BLANK;
-
-
-	      /* Draw border. */
-
-	      if (j==0)
-		scene[k][i][j] = '|';
-	      else
-		if (j==NCOLS-1)
-		  scene[k][i][j] = '|';
-
-	      if (i==0)
-		scene[k][i][j] = '-';
-	      else
-		if (i==NROWS-1)
-		  scene[k][i][j] = '-';
-	    }
-
-
-	  /* Discard the rest of the line (if longer than NCOLS). */
-
-      	  while (((c = fgetc(file)) != '\n') && (c != EOF));
-
-      	}
-
-      fclose (file);
-
+      if (allocate)
+        free(*scene);
+      endwin();
+      sysfatal (!file);
     }
 
+    /* Write up and down borders and correct stream position of
+       up border.*/
+
+    for (j=0; j<NCOLS; j++)
+    {
+      (*scene)[k][0][j] = '-';
+      (*scene)[k][NROWS-1][j] = '-';
+    }
+
+    fseek(file, sizeof(char) * NCOLS, SEEK_CUR);
+    while (((c = fgetc(file)) != '\n') && (c != EOF));
+
+    /* Iterate through NROWS. */
+
+    for (i=1; i<NROWS-1; i++)
+  	{
+
+      /* Write left border and correct stream position */
+
+      (*scene)[k][i][0] = '|';
+      fseek(file, sizeof(char), SEEK_CUR);
+
+      /* Read NCOLS columns from row i.*/
+
+  	  for (j=1; j<NCOLS-1; j++)
+      {
+
+        /* Actual ascii text file may be smaller than NROWS x NCOLS.
+           If we read something out of the 32-127 ascii range,
+           consider a blank instead.*/
+
+        c = (char) fgetc (file);
+        (*scene)[k][i][j] = ((c>=' ') && (c<='~')) ? c : BLANK;
+      }
+
+      /* Write right border and correct stream position */
+
+      (*scene)[k][i][NCOLS-1] = '|';
+      fseek(file, sizeof(char), SEEK_CUR);
+
+
+      /* Discard the rest of the line (if longer than NCOLS). */
+
+  	  while (((c = fgetc(file)) != '\n') && (c != EOF));
+
+  	}
+
+  fclose (file);
+
+  }
+
+  return k;
 }
 
 
@@ -214,7 +288,7 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
    issuing a single 'write' call for each line. Would this yield any significant
    performance improvement? */
 
-void draw (char scene[][NROWS][NCOLS], int number)
+void draw (scene_t* scene, int number)
 {
   int i, j;
   for (i=0; i<NROWS; i++)
@@ -232,7 +306,7 @@ void draw (char scene[][NROWS][NCOLS], int number)
 
 /* Draw scene indexed by number, get some statics and repeat.
    If meny is true, draw the game controls.*/
-void showscene (char scene[][NROWS][NCOLS], int number, int menu)
+void showscene (scene_t* scene, int number, int menu)
 {
   double fps;
   int i;
@@ -311,7 +385,7 @@ void more_snacks(){
 /* Put above the showscene function so I could use it to display active blocks on current scene */
 /* #define BLOCK_INACTIVE -1 */
 
-void init_game (char scene[][NROWS][NCOLS])
+void init_game (scene_t* scene)
 {
   int i;
 	
@@ -392,7 +466,7 @@ void snake_snack(int tail_x, int tail_y)
 /* This function advances the game. It computes the next state
    and updates the scene vector. This is Tron's game logic. */
 
-void advance (char scene[][NROWS][NCOLS])
+void advance (scene_t* scene)
 {
 	pair_t head, tail, last1_tail, last2_tail, body;
 	/* Setting the body position. */
@@ -470,19 +544,18 @@ void advance (char scene[][NROWS][NCOLS])
 
 /* This function plays the game introduction animation. */
 
-void playmovie (char scene[N_INTRO_SCENES][NROWS][NCOLS])
+void playmovie (scene_t* scene, int nscenes)
 {
 
-  int k = 0, i;
+  int k;
   struct timespec how_long;
   how_long.tv_sec = 0;
 
-  for (i=0; (i < N_INTRO_SCENES) && (go_on); i++)
+  for (k=0; (k < nscenes) && (go_on); k++)
     {
       clear ();			               /* Clear screen.    */
       refresh ();			       /* Refresh screen.  */
       showscene (scene, k, 0);                 /* Show k-th scene .*/
-      k = (k + 1) % N_INTRO_SCENES;            /* Circular buffer. */
       how_long.tv_nsec = (movie_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	       /* Apply delay. */
     }
@@ -491,7 +564,7 @@ void playmovie (char scene[N_INTRO_SCENES][NROWS][NCOLS])
 
 /* This function implements the gameplay loop. */
 
-void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
+void playgame (scene_t* scene)
 {
 
   struct timespec how_long;
@@ -520,9 +593,8 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
         restart_game=0;
         gettimeofday (&beginning, NULL);
 
-        clearscene(scene, N_GAME_SCENES);
         init_game (scene);
-        readscenes (SCENE_DIR_GAME, scene, N_GAME_SCENES);
+        readscenes (SCENE_DIR_GAME, &scene, N_GAME_SCENES);
       }
 
       /* Below is equivalent to 'showscene(scene, player_lost ? 1 : 0, 1);' but more efficient. */
@@ -589,9 +661,16 @@ int main ()
 {
   struct sigaction act;
   int rs;
+  int nscenes;
   pthread_t pthread;
-  char intro_scene[N_INTRO_SCENES][NROWS][NCOLS];
-  char game_scene[N_GAME_SCENES][NROWS][NCOLS];
+  scene_t* intro_scene;
+  scene_t* game_scene;
+
+  game_scene = (scene_t *) malloc(sizeof(*game_scene) * N_GAME_SCENES);
+  if(!game_scene){
+    endwin();
+    sysfatal(!game_scene);
+  }
 
   /* Handle SIGNINT (loop control flag). */
 
@@ -620,19 +699,15 @@ int main ()
 
   /* Play intro. */
 
-  clearscene(intro_scene, N_INTRO_SCENES);
-
-  readscenes (SCENE_DIR_INTRO, intro_scene, N_INTRO_SCENES);
+  nscenes = readscenes (SCENE_DIR_INTRO, &intro_scene, 0);
 
   go_on=1;			/* User may skip intro (q). */
 
-  playmovie (intro_scene);
+  playmovie (intro_scene, nscenes);
 
   /* Play game. */
 
-  clearscene(intro_scene, N_GAME_SCENES);
-
-  readscenes (SCENE_DIR_GAME, game_scene, N_GAME_SCENES);
+  readscenes (SCENE_DIR_GAME, &game_scene, N_GAME_SCENES);
 
   go_on=1;
   player_lost=0;
@@ -643,6 +718,8 @@ int main ()
   playgame (game_scene);
 
   endwin();
+  free(intro_scene);
+  free(game_scene);
 
   return EXIT_SUCCESS;
 }
