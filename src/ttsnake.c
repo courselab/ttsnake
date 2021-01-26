@@ -32,7 +32,7 @@
 
 /* Game defaults */
 
-#define N_GAME_SCENES  2	/* Number of frames of the gamepay scnene. */
+#define N_GAME_SCENES  3	/* Number of frames of the gamepay scnene. */
 
 #define NCOLS 90		/* Number of columns of the scene. */
 #define NROWS 40		/* Number of rows of the scene. */
@@ -67,6 +67,7 @@ int game_delay;			/* How long between game scenes. */
 int go_on; 			/* Whether to continue or to exit main loop.*/
 int player_lost;
 int restart_game; /* Whether the user has pressed to restart the game or not */
+int on_settings; /* Whether the user is currently changing settings */
 
 int block_count; 		/*Number of energy blocks collected */
 float score;     		/* Score: average blocks / time */
@@ -347,6 +348,7 @@ void showscene (scene_t* scene, int number, int menu)
       printf ("Blocks: %d\r\n", block_count);  
 	  
       printf ("Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\r\n");
+      printf ("          h: help & settings\r\n");
     }
 }
 
@@ -577,7 +579,8 @@ void playgame (scene_t* scene)
       clear ();                               /* Clear screen. */
       refresh ();			      /* Refresh screen. */
 
-      advance (scene);		               /* Advance game.*/
+      if(!on_settings)
+        advance (scene);		               /* Advance game.*/
 
       if(player_lost){
         /* Write score on the scene */
@@ -597,8 +600,9 @@ void playgame (scene_t* scene)
         readscenes (SCENE_DIR_GAME, &scene, N_GAME_SCENES);
       }
 
-      /* Below is equivalent to 'showscene(scene, player_lost ? 1 : 0, 1);' but more efficient. */
-      showscene (scene, player_lost, 1);                /* Show k-th scene. */
+      showscene (scene, /* Show k-th scene. */
+        player_lost ? 1 : on_settings ? 2 : 0,
+        on_settings ? 0 : 1);
 
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	      /* Apply delay. */
@@ -616,40 +620,57 @@ void * userinput ()
   while (1)
   {
     c = getchar();
-    switch (c)
+
+    if(on_settings)
     {
-    case '+':			/* Increase FPS. */
-      if(game_delay * (0.9) > MIN_GAME_DELAY)
-        game_delay *= (0.9);
-    break;
-    case '-':			/* Decrease FPS. */
-      if(game_delay * (1.1) < MAX_GAME_DELAY)
-        game_delay *= (1.1) ;
-    break;
-    case 'q':
-      kill (0, SIGINT);	/* Quit. */
-    break;
-    case 'r':
-      restart_game = 1;	/* Restart game. */
-    break;
-    case 'w':
-      if(snake.direction != down)
-        snake.direction = up;
-    break;
-    case 'a':
-      if(snake.direction != right)
-        snake.direction = left;
-    break;
-    case 's':
-      if(snake.direction != up)
-        snake.direction = down;
-    break;
-    case 'd':
-      if(snake.direction != left)
-        snake.direction = right;
-    break;
-    default:
-    break;
+      switch(c)
+      {
+        case 'q':
+          on_settings=0;
+          restart_game=1;
+        break;
+        default:
+        break;
+      }
+    } else {
+      switch (c)
+      {
+      case '+':			/* Increase FPS. */
+        if(game_delay * (0.9) > MIN_GAME_DELAY)
+          game_delay *= (0.9);
+      break;
+      case '-':			/* Decrease FPS. */
+        if(game_delay * (1.1) < MAX_GAME_DELAY)
+          game_delay *= (1.1) ;
+      break;
+      case 'q':
+        kill (0, SIGINT);	/* Quit. */
+      break;
+      case 'r':
+        restart_game = 1;	/* Restart game. */
+      break;
+      case 'w':
+        if(snake.direction != down)
+          snake.direction = up;
+      break;
+      case 'a':
+        if(snake.direction != right)
+          snake.direction = left;
+      break;
+      case 's':
+        if(snake.direction != up)
+          snake.direction = down;
+      break;
+      case 'd':
+        if(snake.direction != left)
+          snake.direction = right;
+      break;
+      case 'h':
+        on_settings = 1; /* Begin settings */
+        break;
+      default:
+      break;
+      }
     }
   }
 }
@@ -712,6 +733,7 @@ int main ()
   go_on=1;
   player_lost=0;
   restart_game=0;
+  on_settings=0;
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
