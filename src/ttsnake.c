@@ -632,7 +632,13 @@ int main ()
   int nscenes;
   pthread_t pthread;
   scene_t* intro_scene;
-  scene_t* game_scene = malloc(sizeof(*game_scene) * N_GAME_SCENES);
+  scene_t* game_scene;
+
+  game_scene = (scene_t *) malloc(sizeof(*game_scene) * N_GAME_SCENES);
+  if(!game_scene){
+    endwin();
+    sysfatal(!game_scene);
+  }
 
   /* Handle SIGNINT (loop control flag). */
 
