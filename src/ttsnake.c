@@ -678,8 +678,8 @@ void * userinput ()
       if(which_setting >= ST_COUNT)
         which_setting = ST_COUNT - 1;
 
-      if(max_energy_blocks < 0)
-        max_energy_blocks = 0;
+      if(max_energy_blocks < 1)
+        max_energy_blocks = 1;
 
       if(max_energy_blocks > MAX_ENERGY_BLOCKS_LIMIT)
           max_energy_blocks = MAX_ENERGY_BLOCKS_LIMIT;
