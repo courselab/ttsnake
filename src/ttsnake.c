@@ -680,6 +680,8 @@ int main ()
   playgame (game_scene);
 
   endwin();
+  free(intro_scene);
+  free(game_scene);
 
   return EXIT_SUCCESS;
 }
