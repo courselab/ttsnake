@@ -27,6 +27,7 @@
 #include <pthread.h>
 #include <ncurses.h>
 #include <config.h>
+#include <getopt.h>
 
 #include "utils.h"
 
@@ -121,14 +122,14 @@ typedef char scene_t[NROWS][NCOLS];
 /* Count how many scene files exist in the given directory and returns this number one.
    Complexity: O(log(n)) */
 
-int countfiles(char* dir)
+int countfiles(char* dir, char* data_dir)
 {
   FILE* file;
   char scenefile[1024];
   int k = 1, l;
 
   #define SFOPEN(file) \
-  sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k); \
+  sprintf (scenefile, "%s/%s/scene-%07d.txt", data_dir, dir, k); \
   file = fopen (scenefile, "r");
 
   /* Check if there are any file at all. */
@@ -187,7 +188,7 @@ int countfiles(char* dir)
    then calculate the actual number and allocate appropriate space in
    scene. */
 
-int readscenes (char *dir, scene_t** scene, int nscenes)
+int readscenes (char *dir, char *data_dir, scene_t** scene, int nscenes)
 {
   int i, j, k;
   FILE *file;
@@ -195,7 +196,7 @@ int readscenes (char *dir, scene_t** scene, int nscenes)
 
   if (nscenes == 0)
   {
-    nscenes = countfiles(dir);
+    nscenes = countfiles(dir, data_dir);
     if (nscenes == 0)
     {
         endwin();
@@ -213,7 +214,7 @@ int readscenes (char *dir, scene_t** scene, int nscenes)
     /* Program always read scenes from the installed data path (DATADIR, e.g.
        /usr/share/<dir>. Therefore, if scenes are modified, they should be
        reinstalle (program won't read them from project tree.)  */
-    sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
+    sprintf (scenefile, "%s/%s/scene-%07d.txt",data_dir, dir, k+1);
 
     /* Dont know if the line was for debug or not, commenting it
     printf ("Reading from %s\n", scenefile); */
@@ -564,7 +565,7 @@ void playmovie (scene_t* scene, int nscenes)
 
 /* This function implements the gameplay loop. */
 
-void playgame (scene_t* scene)
+void playgame (scene_t* scene, char *data_dir)
 {
 
   struct timespec how_long;
@@ -594,7 +595,7 @@ void playgame (scene_t* scene)
         gettimeofday (&beginning, NULL);
 
         init_game (scene);
-        readscenes (SCENE_DIR_GAME, &scene, N_GAME_SCENES);
+        readscenes (SCENE_DIR_GAME, data_dir, &scene, N_GAME_SCENES);
       }
 
       /* Below is equivalent to 'showscene(scene, player_lost ? 1 : 0, 1);' but more efficient. */
@@ -657,8 +658,43 @@ void * userinput ()
 
 /* The main function. */
 
-int main ()
+int main(int argc, char **argv)
 {
+  /* Defaults curr_data_screen to {datarootdir}/ttsnake */
+  char *curr_data_dir = (char *)malloc((strlen(DATADIR "/" ALT_SHORT_NAME) + 1) * sizeof(char));
+  strcpy(curr_data_dir, DATADIR "/" ALT_SHORT_NAME);
+
+  /* Initializes program options struct */
+  const struct option stoptions[] = {
+      {"customDataDir", required_argument, 0, 'd'},
+      {"help", no_argument, 0, 'h'}};
+
+  char currOpt;
+
+  /* Handles options passed as arguments */
+  while ((currOpt = (getopt_long(argc, argv, "d:h", stoptions, NULL))) != -1)
+  {
+    switch (currOpt)
+    {
+    case 'd':
+      /* Changes data_dir to one passed via argument */
+      curr_data_dir = (char *)realloc(curr_data_dir, (strlen(optarg) + 1) * sizeof(char));
+      strcpy(curr_data_dir, optarg);
+      break;
+    case 'h':
+      free(curr_data_dir);
+      show_help(argv[0], false);
+      break;
+
+    default:
+      free(curr_data_dir);
+      show_help(argv[0], true);
+    }
+  }
+
+  /* Outputs the data directory being used
+  printf("%s\n", curr_data_dir); */
+
   struct sigaction act;
   int rs;
   int nscenes;
@@ -699,7 +735,7 @@ int main ()
 
   /* Play intro. */
 
-  nscenes = readscenes (SCENE_DIR_INTRO, &intro_scene, 0);
+  nscenes = readscenes (SCENE_DIR_INTRO, curr_data_dir, &intro_scene, 0);
 
   go_on=1;			/* User may skip intro (q). */
 
@@ -707,7 +743,7 @@ int main ()
 
   /* Play game. */
 
-  readscenes (SCENE_DIR_GAME, &game_scene, N_GAME_SCENES);
+  readscenes (SCENE_DIR_GAME, curr_data_dir, &game_scene, N_GAME_SCENES);
 
   go_on=1;
   player_lost=0;
@@ -715,11 +751,12 @@ int main ()
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
-  playgame (game_scene);
+  playgame (game_scene, curr_data_dir);
 
   endwin();
   free(intro_scene);
   free(game_scene);
+  free(curr_data_dir);
 
   return EXIT_SUCCESS;
 }
