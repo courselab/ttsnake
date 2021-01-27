@@ -141,7 +141,7 @@ int countfiles(char* dir, char* data_dir)
 
   /* Double k until find a superior limit for files number. */
 
-  do 
+  do
   {
     k *= 2;
 
@@ -218,7 +218,7 @@ int readscenes (char *dir, char *data_dir, scene_t** scene, int nscenes)
 
     /* Dont know if the line was for debug or not, commenting it
     printf ("Reading from %s\n", scenefile); */
-    
+
     file = fopen (scenefile, "r");
     if (!file)
     {
@@ -325,14 +325,15 @@ void showscene (scene_t* scene, int number, int menu)
     timeval_subtract (&elapsed_total, &now, &beginning);
   }
 
-  /* Displays active energy blocks */
-
-  for (i=0; i<MAX_ENERGY_BLOCKS; i++)
-    if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].y][energy_block[i].x] = ENERGY_BLOCK;
-
+  /* Displays active energy blocks if the player is still playing the game (number == 1 means player lost)*/
+  if(number == 0)
+  {
+    for (i=0; i<MAX_ENERGY_BLOCKS; i++)
+      if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].y][energy_block[i].x] = ENERGY_BLOCK;
+  }
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
-  
+
   /*Calculate score based on time*/
   if (elapsed_total.tv_sec != 0)
   {
@@ -343,10 +344,10 @@ void showscene (scene_t* scene, int number, int menu)
     {
       printf ("Elapsed: %5ds, fps=%5.2f\r\n", /* CR-LF because of ncurses. */
 	      (int) elapsed_total.tv_sec, fps);
-      /*Add to the menu score and blocks collected */	  
+      /*Add to the menu score and blocks collected */
       printf ("Score: %.2f\r\n", score);
-      printf ("Blocks: %d\r\n", block_count);  
-	  
+      printf ("Blocks: %d\r\n", block_count);
+
       printf ("Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\r\n");
     }
 }
@@ -365,7 +366,7 @@ void more_snacks(){
     	do
   	{
   	  isValid = 1;
-	  energy_block[i].x = (rand() % (NCOLS - 2)) + 1;
+	    energy_block[i].x = (rand() % (NCOLS - 2)) + 1;
   	  energy_block[i].y = (rand() % (NROWS - 2)) + 1;
 	  for(j = 0; j < snake.length;j++){
 		  if(energy_block[i].x == snake.positions[j].x && energy_block[i].y == snake.positions[j].y){
@@ -378,7 +379,7 @@ void more_snacks(){
 	  }
 
   	}while(i < MAX_ENERGY_BLOCKS);
-        
+
 	return;
 }
   /* Instantiate the snake and a set of energy blocks. */
@@ -389,12 +390,12 @@ void more_snacks(){
 void init_game (scene_t* scene)
 {
   int i;
-	
+
   srand(time(NULL));
   /*Set initial score and blocks collected 0 */
   score = 0;
   block_count = 0;
-	
+
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
@@ -432,15 +433,15 @@ void init_game (scene_t* scene)
    It adds the new piece of the snake's body to the
    first position of the vector, i.e., the new piece
    becomes the snake's tail. However, since this function
-   is called after the snake has moved, the tail isn't 
-   erased from the screen, and the visual effect 
-   should be as if the new piece was added to the 
-   middle of the body, even though technically the new 
+   is called after the snake has moved, the tail isn't
+   erased from the screen, and the visual effect
+   should be as if the new piece was added to the
+   middle of the body, even though technically the new
    piece is added to the end of the body.
  */
 
 void snake_snack(int tail_x, int tail_y)
-{	
+{
 	pair_t *auxVector;
 	int i, auxCounter;
 
@@ -453,7 +454,7 @@ void snake_snack(int tail_x, int tail_y)
 	snake.positions =(pair_t*)realloc(snake.positions, sizeof(pair_t) * snake.length);/*Increase the size of the positions vector*/
 	snake.positions[0].y = tail_y;/*Add the new piece to the snake's body*/
 	snake.positions[0].x = tail_x;
-	
+
 	for(i = 0; i <  auxCounter; i++){/*Repopulate the snake.positions vector*/
 		snake.positions[i + 1].x = auxVector[i].x;
 		snake.positions[i + 1].y = auxVector[i].y;
@@ -461,7 +462,7 @@ void snake_snack(int tail_x, int tail_y)
 
 	free(auxVector);
 	return;
-}	
+}
 
 
 /* This function advances the game. It computes the next state
@@ -510,7 +511,7 @@ void advance (scene_t* scene)
 			}
 		}
 	}
-	
+
 
   /* Check if head collided with border or itself */
   if(   head.x <= 0 || head.x >= NCOLS - 1
@@ -527,7 +528,7 @@ void advance (scene_t* scene)
 
 	/* Erase old position of the tail or add new piece to the snake */
 	if(flag == 0)
-	{	
+	{
 		scene[0][tail.y][tail.x] = ' ';
 	}else{
 		flag = 0;
