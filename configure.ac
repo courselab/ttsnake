@@ -36,6 +36,10 @@ dnl Alternative short name used for directories, binary prefixes etc.
 AC_DEFINE(ALT_SHORT_NAME,["ttsnake"],[Define alternative short name.])
 AC_SUBST([alt_short_name],[ttsnake])
 
+AC_DEFINE(BIN_NAME,["ttsnake"],[Define the program binary name.])
+AC_SUBST([bin_name],[ttsnake])
+
+
 dnl Replace missing functions (see also GNUlib)
 
 dnl AC_CONFIG_LIBOBJ_DIR([replace])
