@@ -42,4 +42,8 @@
 int
 timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y);
 
+/* Shows help screen. Exit code is -1 if isError is set to true */
+
+void show_help(char *program_name, char isError);
+
 #endif /* UTILS_H */
