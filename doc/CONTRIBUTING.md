@@ -4,29 +4,40 @@ This document needs to be properly edited.
 
 ## Meanwhile, these are some essencial notes
 
-This project's development workflow is based on 
+* This project's development workflow is based on 
 
-- GitFlow branching strategy [1]
-- Semantiv versionng 2.0.0 release naming scheme [2]
 
-If you obtain the source from the Version Control Repository [3], you will
+>> GitFlow branching strategy [1]
+
+>> Semantiv versionng 2.0.0 release naming scheme [2]
+
+- If you obtain the source from the Version Control Repository [3], you will
 need GNU Build System (aka Autotools) to build the project (note 1)
 
-Latest stabe release resides in _main_ branch.
+
+- Latest stabe release resides in _main_ branch.
 Pre-release (alpha, beta, release candidates) reside on branch _prerelease_.
 
-Contribution admission policy requires developers to proposed modifications
+
+- Contribution admission policy requires developers to proposed modifications
 as feature branches and submitted them as pull requests, which in turn
 need to be approved by other developers before being merged into the propper 
 branches.
 
-If you are developer and is assinged an issue, and you believe you are not
+
+- If you are a developer and is assinged an issue, and you believe you are not
 able to handle timely, please, try to reasign it to someone else.
 
-Program reads data from installed files. Therefore, if data is modified
-(e.g. scene files), remember to reinstall the project (```make install```).
 
-Code wisdom for this project
+- Program reads data from installed files. Therefore, if data is modified
+(e.g. scene files), remember to reinstall (note 2) the project with 
+
+```
+make install
+```
+
+
+_Code wisdom for this project_
 
 - Branch always (create a new feature branch for each modification)
 - Commit small (add & commit single changes for better traceability)
@@ -44,3 +55,8 @@ Notes
 (1) A distribution repository with tarballs with pre-build configuration
 scripts (does not need Autotools) should be available upon the first
 stable release.
+
+(2) The alternative to it would be to have a wrapper script in `src` which
+would invoke the binary with some command line option choosing a different
+data path, while the install rule would install the plain binary. This is
+left for future enhancements if ever wished.
