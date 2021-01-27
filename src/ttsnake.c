@@ -353,12 +353,11 @@ void showscene (scene_t* scene, int number, int menu)
 }
 
 
-/*This function generates a new set of energy blocks.
-  there are checks to prevent it from spawning blocks
-  on top of the borders and on top of the snake. It is called
-  every MAX_ENERGY_BLOCKS-th block eaten*/
+/* This function is called whenever a block becomes inactive. It goes through the array of
+ * energy blocks until it finds the inactive block. It then replaces it, and ends.*/
 void more_snacks(){
    /* Generate energy blocks away from the borders and the snake */
+
  	int i = 0, j = 0, isValid;
 	/*We generate a new block and check it against every piece of the snake.
 	 if the block is on top of the snake, then we generate a new position
@@ -380,8 +379,41 @@ void more_snacks(){
 
   	}while(i < MAX_ENERGY_BLOCKS);
 
+=======
+ 	int i = 0, j, isValid = 0;
+
+	/* Check the array of energy blocks, one by one. If current block is inactive, generate a new
+	 * (x,y) ordered pair of coordinates and make it active again. Check if the new position
+	 * is a valid position(i.e., it's not a position that the snake currently occupies). If
+	 * the new position is not valid, generate a new (x,y) ordered pair and check again. 
+	 * Once an invalid block is replaced, break from the loop.*/ 
+
+	do{
+		if(energy_block[i].x == BLOCK_INACTIVE){
+			do{
+				isValid = 1;
+				energy_block[i].x = (rand() % (NCOLS - 2)) + 1;
+  	  			energy_block[i].y = (rand() % (NROWS - 2)) + 1;
+				for(j = 0; j < snake.length; j++){
+					if(energy_block[i].x == snake.positions[j].x){
+						if(energy_block[i].y== snake.positions[j].y){
+							isValid = 0;
+							/*isValid is being used both as a check to see if
+							the new position is valid, and to see if the inactive block
+							that prompted the funtion call has already been replaced.*/
+							break;
+						}
+					}
+				}
+			}while(isValid != 1);
+		}
+		i++;
+	}while(i < MAX_ENERGY_BLOCKS && isValid == 0);						
+    	
 	return;
 }
+
+
   /* Instantiate the snake and a set of energy blocks. */
 
 /* Put above the showscene function so I could use it to display active blocks on current scene */
@@ -506,9 +538,8 @@ void advance (scene_t* scene)
 			block_count += 1;
 			flag = 1;
 			energy_block[i].x = BLOCK_INACTIVE;
-			if(block_count%MAX_ENERGY_BLOCKS == 0){
-			       	more_snacks();
-			}
+			more_snacks();
+			
 		}
 	}
 
