@@ -14,11 +14,12 @@
                  \______.' '.__.'\__/  \__/[___][___||__].',__` [\__) )                   
                                                         ( ( __))                          
                                                                                           
+                                  Press 'p' to play                                       
                                   Press 'q' to exit                                       
                                                                                           
                            Change settings with 'WASD' keys                               
                                                                                           
-                                                                                          
+                                                                                           
                                                                                           
                                                                                           
                                                                                           

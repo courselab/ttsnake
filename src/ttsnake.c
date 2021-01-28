@@ -669,7 +669,7 @@ void * userinput ()
     {
       switch(c)
       {
-        case 'q':
+        case 'p':
           on_settings=0;
           restart_game=1;
         break;
@@ -688,6 +688,9 @@ void * userinput ()
           if(which_setting == ST_MAX_ENERGY){
             max_energy_blocks += 1;
           }
+        break;
+        case 'q':
+          kill (0, SIGINT);	/* Quit. */
         break;
         default:
         break;
@@ -854,7 +857,7 @@ int main(int argc, char **argv)
   go_on=1;
   player_lost=0;
   restart_game=0;
-  on_settings=0;
+  on_settings=1;
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
