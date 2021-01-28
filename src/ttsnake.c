@@ -95,7 +95,8 @@ struct snake_st
   pair_t head;			 /* The snake's head. */
   int length;			 /* The snake length (including head). */
   pair_t *positions;	/* Position of each body part of the snake. */
-  direction_t direction;	 /* Movement direction. */
+  direction_t direction, /* Movement direction. */
+              lastdirection; /* Valid moviment control */
 };
 
 snake_t snake;			/* The snake istance. */
@@ -407,6 +408,7 @@ void init_game (scene_t* scene)
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
+  snake.lastdirection = snake.direction;
   snake.length = 7;
 
 	const pair_t initialPosition[] = {
@@ -505,6 +507,7 @@ void advance (scene_t* scene)
 			head.y += 1;
 			break;
 	}
+	snake.lastdirection = snake.direction;
 
 	/*When the head position is the same as the energy block*/
 	for(i = 0; i < MAX_ENERGY_BLOCKS; i++)
@@ -642,19 +645,19 @@ void * userinput ()
       restart_game = 1;	/* Restart game. */
     break;
     case 'w':
-      if(snake.direction != down)
+      if(snake.lastdirection != down)
         snake.direction = up;
     break;
     case 'a':
-      if(snake.direction != right)
+      if(snake.lastdirection != right)
         snake.direction = left;
     break;
     case 's':
-      if(snake.direction != up)
+      if(snake.lastdirection != up)
         snake.direction = down;
     break;
     case 'd':
-      if(snake.direction != left)
+      if(snake.lastdirection != left)
         snake.direction = right;
     break;
     default:
