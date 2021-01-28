@@ -336,9 +336,11 @@ void showscene (scene_t* scene, int number, int menu)
     timeval_subtract (&elapsed_total, &now, &beginning);
   }
 
-  for (i=0; i<max_energy_blocks; i++)
-    if(energy_block[i].x != BLOCK_INACTIVE)
+  if(number == 0){
+    for (i=0; i<max_energy_blocks; i++)
+      if(energy_block[i].x != BLOCK_INACTIVE)
         scene[number][energy_block[i].y][energy_block[i].x] = ENERGY_BLOCK;
+  }
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
   
