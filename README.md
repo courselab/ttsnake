@@ -1,52 +1,66 @@
 
- TexTron Snake
- ==============================
+ # TexTron Snake
+ 
+ TexTron Snake is a very simple ASCII snake game tributed to the classic
+ Tron arcade. It was meant to be developed as a collaborative programming
+ exercise in a course on Open Source Systems taught to undergraduate CS
+ students.
 
- TexTron Snake is very simple ascii snake game tributed to classic Tron arcade.
- It was meant to be developed as a collaborative programming exercise
- in course on Open Source Systems taught for undergraduate CS students.
+ ## INSTALL
 
- INSTALL
- --------------------------------------------------
+ If you have obtained the project source from the __version control repository__,
 
- Quick instructions:
-
- * If you have obtained the project source from the version control repository
-
-Excute the script 
+ execute the script 
 
  ```
  $ ./autogen.sh
  ```
 
-to boostrap the build configuration scripts `configure`. You'll need GNU Build
-System (Autotools) installed. In debian/ubuntu based plataforms, you may
-install required software with
+to boostrap the build configuration script `configure`. To that end, you'll 
+need to have GNU Build System (Autotools) installed. In debian/ubuntu based 
+platforms,  you may install required software with
 
 ```
-sudo apt install automake autoconf
+$ sudo apt install automake autoconf
 ```
 
-* If you have either obtanied the project from a distribution repository or
-bootstraped the build system as described above, and already have the build
-configuration script `configure`, then execute it
+On the other hand, if you have obtained the software form a __distribution 
+repository__, usually as a tarball, you should already have the  script `configure`.
 
-```
- $ ./configure
- $ make
- ```
- 
-*  Alternatively, if you have obtained the source from a distribution tarball,
- you should already have the configuration script pre-built. In this case,
- you may skip evoking autotools and use just
-
+Either way, locate the file in the root of source directory and execute it
 
 ```
  $ ./configure
- $ make
 ```
 
- Optionally, if you wish to build and install the software under /tmp/foo
+This script shall perform a series of tests to collect data about the build 
+platform. If it complains about missing pieces of software, install them 
+as needed.
+
+For instance, you'll need `libncurses`, which in debian/ubuntu may be
+installed with
+
+```
+sudo apt install libncurses5-dev
+```
+
+Support for POSIX thread is also required.
+
+Finally, build the software and install it with
+
+```
+ $ make
+ $ make install
+```
+
+This should install the program under the system path. Usually the binary
+will be placed in `/usr/bin`, and data files in `/usr/share`. Administrative
+privileges (sudo) are required to write in those locations.
+
+
+
+Optionally, if you wish to install the software under a different location,
+ for instance, in `/tmp/foo`, execute
 
 ```
  $ ./configure --prefix=/tmp/foo
@@ -54,29 +68,50 @@ configuration script `configure`, then execute it
  $ make install
 ```
 
-## Notes
+This shall install the software locally, in this case in `/tmp/foo/bin`
+and the data files in `/tmp/share`. 
 
- Scene files are installed under` $(prefix)/share/textronsnake`.
+ For more detailed instructions, please, refer to file `INSTALL`
 
- You'll need `libncurses` and pthread support to build the software.
+## EXECUTION
 
- * Detailed instructions: refer to file `INSTALL`
+```
+ Usage:  ttsnake [options]
 
- PROGRAM EXECUTION
- --------------------------------------------------
+         Options
+         
+	 -h, --help      Displays this information message
+	 -d, --data      Selects a non-default data path
+```
 
- Usage:  ttsnake
+ ## Playing the game
+ 
+ The game takes place on a rectangular areana where a snake continuously
+ move in one of the four directions: left, right, up and down --- it never 
+ stops. As the snake moves it looses energy and if all of it is exausted, the
+ snake dies. To recover energy, the snake needs to eat pieces of food which
+ are constantly replaced at random positions. 
 
+Be careful, though. The arena borders are electrified and would kill the snake
+if touched. Morover, mind that the snake is poisonous and it would also die if 
+it accidently bites itself, i.e. if the snake's head crosses its own body (yes, 
+this is weird for snakes, but this is a Tron Snake).
 
- FUNCTIONALITY
- --------------------------------------------------
+The game score is the count of eaten blocks until the game is over.
 
- The program will load scene files from the scenes directory.
-
- Controls:
-
+ ### Controls:
+	WASD to control the snake
 	+ decreases the game speed
 	- increases the game speed 
 	q quits
+	r at anytime to restart the game
 
+## Contribute to this project
 
+If you wish to contribute to the project, please, __do__ read the file
+
+```
+doc/CONTRIBUTING.md
+```
+
+which contains important information.

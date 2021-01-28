@@ -27,13 +27,13 @@
 #include <pthread.h>
 #include <ncurses.h>
 #include <config.h>
+#include <getopt.h>
 
 #include "utils.h"
 
 /* Game defaults */
 
-#define N_INTRO_SCENES 485	/* Number of frames of the intro animation.*/
-#define N_GAME_SCENES  2	/* Number of frames of the gamepay scnene. */
+#define N_GAME_SCENES  3	/* Number of frames of the gamepay scnene. */
 
 #define NCOLS 90		/* Number of columns of the scene. */
 #define NROWS 40		/* Number of rows of the scene. */
@@ -49,7 +49,7 @@
 #define SNAKE_HEAD	 '0'	 /* Character to draw the snake head. */
 #define ENERGY_BLOCK     '+'	 /* Character to draw the energy block. */
 
-#define MAX_ENERGY_BLOCKS 5	/* Maximum number of energy blocks. */
+#define MAX_ENERGY_BLOCKS_LIMIT 50	/* Limit on the maximum number of energy blocks. */
 
 #define MIN_GAME_DELAY 10200
 #define MAX_GAME_DELAY 94000
@@ -68,6 +68,15 @@ int game_delay;			/* How long between game scenes. */
 int go_on; 			/* Whether to continue or to exit main loop.*/
 int player_lost;
 int restart_game; /* Whether the user has pressed to restart the game or not */
+int on_settings; /* Whether the user is currently changing settings */
+int max_energy_blocks; /* Max number of energy blocks to display at once */
+
+enum settings_t {
+  ST_MAX_ENERGY = 0,    /* '= 0' ensures sequential counting from 0 */
+  ST_COUNT
+};
+
+int which_setting; /* Which setting the player is currently configuring */
 
 int block_count; 		/*Number of energy blocks collected */
 float score;     		/* Score: average blocks / time */
@@ -95,8 +104,9 @@ struct snake_st
   pair_t head;			 /* The snake's head. */
   int length;			 /* The snake length (including head). */
   pair_t *positions;	/* Position of each body part of the snake. */
-  direction_t direction;	 /* Movement direction. */
-  int energy; /*Energy of moviments */
+  direction_t direction, /* Movement direction. */
+              lastdirection; /* Valid movement control */
+  int energy; /*Energy of movements */
 };
 
 snake_t snake;			/* The snake istance. */
@@ -107,27 +117,7 @@ struct
 {
   int x;			/* Coordinate x of the energy block. */
   int y;			/* Coordinate y of the energy block. */
-} energy_block[MAX_ENERGY_BLOCKS]; /* Array of energy blocks. */
-
-
-/* Clear the scene vector.
-
-   The scene vector is an array of nscenes matrixes of
-   NROWS x NCOLS chars, containg the ascii image.
-*/
-
-void clearscene (char scene[][NROWS][NCOLS], int nscenes)
-{
-  int i, j, k;
-
-  /* Fill the ncenes matrixes with blaks. */
-
-  for (k=0; k<nscenes; k++)
-    for (i=0; i<NROWS; i++)
-      for (j=0; j<NCOLS; j++)
-	scene[k][i][j] = BLANK;
-
- }
+} energy_block[MAX_ENERGY_BLOCKS_LIMIT]; /* Array of energy blocks. */
 
 /* Load all scenes from dir into the scene vector.
 
@@ -136,76 +126,171 @@ void clearscene (char scene[][NROWS][NCOLS], int nscenes)
 
 */
 
-void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
+/* All chars of one single scene. */
+
+typedef char scene_t[NROWS][NCOLS];
+
+/* Count how many scene files exist in the given directory and returns this number one.
+   Complexity: O(log(n)) */
+
+int countfiles(char* dir, char* data_dir)
+{
+  FILE* file;
+  char scenefile[1024];
+  int k = 1, l;
+
+  #define SFOPEN(file) \
+  sprintf (scenefile, "%s/%s/scene-%07d.txt", data_dir, dir, k); \
+  file = fopen (scenefile, "r");
+
+  /* Check if there are any file at all. */
+
+  SFOPEN(file);
+
+  if (!file)
+    return 1;
+
+  /* Double k until find a superior limit for files number. */
+
+  do 
+  {
+    k *= 2;
+
+    fclose(file);
+    SFOPEN(file);
+  }
+  while (file);
+
+  /* Binary search in the interval (k/2, k). */
+
+  l = k / 8;
+  for (k -= k / 4; l > 0; l /= 2)
+  {
+    SFOPEN(file);
+
+    if (file)
+    {
+      k += l;
+      fclose(file);
+    }
+
+    else
+      k -= l;
+  }
+
+  /* Ensure that last step k is the last number for what there is a file. */
+
+  SFOPEN(file);
+
+  if (file)
+    {
+      return k;
+      fclose(file);
+    }
+
+  else
+    return k - 1;
+
+  #undef SFOPEN
+}
+
+/* Read all the scenes in the 'dir' directory, save it in 'scene' and
+   return the number of readed scenes. If zero is passed as nscenes,
+   then calculate the actual number and allocate appropriate space in
+   scene. */
+
+int readscenes (char *dir, char *data_dir, scene_t** scene, int nscenes)
 {
   int i, j, k;
   FILE *file;
-  char scenefile[1024], c;
+  char scenefile[1024], c, allocate = false;
+
+  if (nscenes == 0)
+  {
+    nscenes = countfiles(dir, data_dir);
+    if (nscenes == 0)
+    {
+        endwin();
+        sysfatal (nscenes == 0);
+    }
+    *scene = malloc(sizeof(**scene) * nscenes);
+    allocate = true;
+  }
 
   /* Read nscenes. */
 
-  i=0;
   for (k=0; k<nscenes; k++)
+  {
+
+    /* Program always read scenes from the installed data path (DATADIR, e.g.
+       /usr/share/<dir>. Therefore, if scenes are modified, they should be
+       reinstalle (program won't read them from project tree.)  */
+    sprintf (scenefile, "%s/%s/scene-%07d.txt",data_dir, dir, k+1);
+
+    /* Dont know if the line was for debug or not, commenting it
+    printf ("Reading from %s\n", scenefile); */
+    
+    file = fopen (scenefile, "r");
+    if (!file)
     {
-
-      /* Program always read scenes from the installed data path (DATADIR, e.g.
-	 /usr/share/<dir>. Therefore, if scenes are modified, they should be
-	 reinstalle (program won't read them from project tree.)  */
-      sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
-
-      /* Dont know if the line was for debug or not, commenting it
-      printf ("Reading from %s\n", scenefile); */
-      
-      file = fopen (scenefile, "r");
-      if(!file){
-        endwin();
-        sysfatal (!file);
-      }
-
-      /* Iterate through NROWS. */
-
-      for (i=0; i<NROWS; i++)
-      	{
-
-	  /* Read NCOLS columns from row i.*/
-
-      	  for (j=0; j<NCOLS; j++)
-	    {
-
-	      /* Actual ascii text file may be smaller than NROWS x NCOLS.
-		 If we read something out of the 32-127 ascii range,
-		 consider a blank instead.*/
-
-	      c = (char) fgetc (file);
-	      scene[k][i][j] = ((c>=' ') && (c<='~')) ? c : BLANK;
-
-
-	      /* Draw border. */
-
-	      if (j==0)
-		scene[k][i][j] = '|';
-	      else
-		if (j==NCOLS-1)
-		  scene[k][i][j] = '|';
-
-	      if (i==0)
-		scene[k][i][j] = '-';
-	      else
-		if (i==NROWS-1)
-		  scene[k][i][j] = '-';
-	    }
-
-
-	  /* Discard the rest of the line (if longer than NCOLS). */
-
-      	  while (((c = fgetc(file)) != '\n') && (c != EOF));
-
-      	}
-
-      fclose (file);
-
+      if (allocate)
+        free(*scene);
+      endwin();
+      sysfatal (!file);
     }
 
+    /* Write up and down borders and correct stream position of
+       up border.*/
+
+    for (j=0; j<NCOLS; j++)
+    {
+      (*scene)[k][0][j] = '-';
+      (*scene)[k][NROWS-1][j] = '-';
+    }
+
+    fseek(file, sizeof(char) * NCOLS, SEEK_CUR);
+    while (((c = fgetc(file)) != '\n') && (c != EOF));
+
+    /* Iterate through NROWS. */
+
+    for (i=1; i<NROWS-1; i++)
+  	{
+
+      /* Write left border and correct stream position */
+
+      (*scene)[k][i][0] = '|';
+      fseek(file, sizeof(char), SEEK_CUR);
+
+      /* Read NCOLS columns from row i.*/
+
+  	  for (j=1; j<NCOLS-1; j++)
+      {
+
+        /* Actual ascii text file may be smaller than NROWS x NCOLS.
+           If we read something out of the 32-127 ascii range,
+           consider a blank instead.*/
+
+        c = (char) fgetc (file);
+        (*scene)[k][i][j] = ((c>=' ') && (c<='~')) ? c : BLANK;
+      }
+
+      /* Write right border and correct stream position */
+
+      (*scene)[k][i][NCOLS-1] = '|';
+      fseek(file, sizeof(char), SEEK_CUR);
+
+
+      /* Discard the rest of the line (if longer than NCOLS). */
+
+  	  while (((c = fgetc(file)) != '\n') && (c != EOF));
+
+  	}
+
+  fclose (file);
+
+  }
+
+  return k;
 }
 
 
@@ -215,7 +300,7 @@ void readscenes (char *dir, char scene[][NROWS][NCOLS], int nscenes)
    issuing a single 'write' call for each line. Would this yield any significant
    performance improvement? */
 
-void draw (char scene[][NROWS][NCOLS], int number)
+void draw (scene_t* scene, int number)
 {
   int i, j;
   for (i=0; i<NROWS; i++)
@@ -233,7 +318,7 @@ void draw (char scene[][NROWS][NCOLS], int number)
 
 /* Draw scene indexed by number, get some statics and repeat.
    If meny is true, draw the game controls.*/
-void showscene (char scene[][NROWS][NCOLS], int number, int menu)
+void showscene (scene_t* scene, int number, int menu)
 {
   double fps;
   int i;
@@ -251,11 +336,9 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
     timeval_subtract (&elapsed_total, &now, &beginning);
   }
 
-  /* Displays active energy blocks */
-
-  for (i=0; i<MAX_ENERGY_BLOCKS; i++)
-    if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].y][energy_block[i].x] = ENERGY_BLOCK;
-
+  for (i=0; i<max_energy_blocks; i++)
+    if(energy_block[i].x != BLOCK_INACTIVE)
+        scene[number][energy_block[i].y][energy_block[i].x] = ENERGY_BLOCK;
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
   
@@ -273,8 +356,47 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
       printf ("Score: %.2f\r\n", score);
       printf ("Energy: %d\r\n", snake.energy);
       printf ("Blocks: %d\r\n", block_count);  
-      printf ("Controls: q: quit | r: restart\r\n");
+	  
+      printf ("Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\r\n");
+      printf ("          h: help & settings\r\n");
     }
+}
+
+/* This function is called whenever a block becomes inactive. It goes through the array of
+ * energy blocks until it finds the inactive block. It then replaces it, and ends.*/
+void more_snacks(){
+   /* Generate energy blocks away from the borders and the snake */
+ 	int i = 0, j, isValid = 0;
+
+	/* Check the array of energy blocks, one by one. If current block is inactive, generate a new
+	 * (x,y) ordered pair of coordinates and make it active again. Check if the new position
+	 * is a valid position(i.e., it's not a position that the snake currently occupies). If
+	 * the new position is not valid, generate a new (x,y) ordered pair and check again. 
+	 * Once an invalid block is replaced, break from the loop.*/ 
+
+	do{
+		if(energy_block[i].x == BLOCK_INACTIVE){
+			do{
+				isValid = 1;
+				energy_block[i].x = (rand() % (NCOLS - 2)) + 1;
+  	  			energy_block[i].y = (rand() % (NROWS - 2)) + 1;
+				for(j = 0; j < snake.length; j++){
+					if(energy_block[i].x == snake.positions[j].x){
+						if(energy_block[i].y== snake.positions[j].y){
+							isValid = 0;
+							/*isValid is being used both as a check to see if
+							the new position is valid, and to see if the inactive block
+							that prompted the funtion call has already been replaced.*/
+							break;
+						}
+					}
+				}
+			}while(isValid != 1);
+		}
+		i++;
+	}while(i < max_energy_blocks && isValid == 0);						
+	
+	return;
 }
 
 
@@ -283,7 +405,7 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 /* Put above the showscene function so I could use it to display active blocks on current scene */
 /* #define BLOCK_INACTIVE -1 */
 
-void init_game (char scene[][NROWS][NCOLS])
+void init_game (scene_t* scene)
 {
   int i;
 	
@@ -295,6 +417,7 @@ void init_game (char scene[][NROWS][NCOLS])
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
+  snake.lastdirection = snake.direction;
   snake.length = 7;
 
 	const pair_t initialPosition[] = {
@@ -317,7 +440,7 @@ void init_game (char scene[][NROWS][NCOLS])
 	}
 
    /* Generate energy blocks away from the borders */
-  for (i=0; i<MAX_ENERGY_BLOCKS; i++)
+  for (i=0; i<max_energy_blocks; i++)
   {
     energy_block[i].x = (rand() % (NCOLS - 2)) + 1 ;
     energy_block[i].y = (rand() % (NROWS - 2)) + 1;
@@ -364,7 +487,7 @@ void snake_snack(int tail_x, int tail_y)
 /* This function advances the game. It computes the next state
    and updates the scene vector. This is Tron's game logic. */
 
-void advance (char scene[][NROWS][NCOLS])
+void advance (scene_t* scene)
 {
 	pair_t head, tail, last1_tail, last2_tail, body;
 	/* Setting the body position. */
@@ -393,9 +516,10 @@ void advance (char scene[][NROWS][NCOLS])
 			head.y += 1;
 			break;
 	}
+	snake.lastdirection = snake.direction;
 
 	/*When the head position is the same as the energy block*/
-	for(i = 0; i < MAX_ENERGY_BLOCKS; i++)
+	for(i = 0; i < max_energy_blocks; i++)
 	{
 		if(head.x == energy_block[i].x && head.y == energy_block[i].y)
 		{
@@ -403,6 +527,7 @@ void advance (char scene[][NROWS][NCOLS])
 			flag = 1;
 			energy_block[i].x = BLOCK_INACTIVE;
       snake.energy+= 10;
+			more_snacks();
 		}
 	}
 	
@@ -441,28 +566,40 @@ void advance (char scene[][NROWS][NCOLS])
 
 /* This function plays the game introduction animation. */
 
-void playmovie (char scene[N_INTRO_SCENES][NROWS][NCOLS])
+void playmovie (scene_t* scene, int nscenes)
 {
 
-  int k = 0, i;
+  int k;
   struct timespec how_long;
   how_long.tv_sec = 0;
 
-  for (i=0; (i < N_INTRO_SCENES) && (go_on); i++)
+  for (k=0; (k < nscenes) && (go_on); k++)
     {
       clear ();			               /* Clear screen.    */
       refresh ();			       /* Refresh screen.  */
       showscene (scene, k, 0);                 /* Show k-th scene .*/
-      k = (k + 1) % N_INTRO_SCENES;            /* Circular buffer. */
       how_long.tv_nsec = (movie_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	       /* Apply delay. */
     }
 }
 
+void draw_settings(scene_t *scene){
+  char buffer[NCOLS];
+  int i;
+
+  /* clean buffer */
+  for(i = 0; i < NCOLS; i++)
+    buffer[i] = ' ';
+
+  sprintf(buffer, "%.15s %c %3d %c     Maximum number of blocks to display at the same time.",
+          "", which_setting == 0 ? '<' : ' ', max_energy_blocks, which_setting == 0 ? '>' : ' ');
+  memcpy(&scene[2][22][12], buffer, strlen(buffer));
+}
+
 
 /* This function implements the gameplay loop. */
 
-void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
+void playgame (scene_t* scene, char *data_dir)
 {
 
   struct timespec how_long;
@@ -475,7 +612,11 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
       clear ();                               /* Clear screen. */
       refresh ();			      /* Refresh screen. */
 
-      advance (scene);		               /* Advance game.*/
+      if(!on_settings) {
+        advance (scene);		               /* Advance game.*/
+      } else {
+        draw_settings(scene);
+      }
 
       if(player_lost){
         /* Write score on the scene */
@@ -491,13 +632,13 @@ void playgame (char scene[N_GAME_SCENES][NROWS][NCOLS])
         restart_game=0;
         gettimeofday (&beginning, NULL);
 
-        clearscene(scene, N_GAME_SCENES);
         init_game (scene);
-        readscenes (SCENE_DIR_GAME, scene, N_GAME_SCENES);
+        readscenes (SCENE_DIR_GAME, data_dir, &scene, N_GAME_SCENES);
       }
 
-      /* Below is equivalent to 'showscene(scene, player_lost ? 1 : 0, 1);' but more efficient. */
-      showscene (scene, player_lost, 1);                /* Show k-th scene. */
+      showscene (scene, /* Show k-th scene. */
+        player_lost ? 1 : on_settings ? 2 : 0,
+        on_settings ? 0 : 1);
 
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	      /* Apply delay. */
@@ -515,48 +656,95 @@ void * userinput ()
   while (1)
   {
     c = getchar();
-    switch (c)
+
+    if(on_settings)
     {
-    case '+':			/* Increase FPS. */
-      if(game_delay * (0.9) > MIN_GAME_DELAY)
-        game_delay *= (0.9);
-    break;
-    case '-':			/* Decrease FPS. */
-      if(game_delay * (1.1) < MAX_GAME_DELAY)
-        game_delay *= (1.1) ;
-    break;
-    case 'q':
-      kill (0, SIGINT);	/* Quit. */
-    break;
-    case 'r':
-      restart_game = 1;	/* Restart game. */
-    break;
-    case 'w':
-      if(snake.direction != down){
-        snake.energy--;
-        snake.direction = up;
+      switch(c)
+      {
+        case 'q':
+          on_settings=0;
+          restart_game=1;
+        break;
+        case 'w':
+          which_setting -= 1;
+        break;
+        case 's':
+          which_setting += 1;
+        break;
+        case 'a':
+          if(which_setting == ST_MAX_ENERGY){
+            max_energy_blocks -= 1;
+          }
+        break;
+        case 'd':
+          if(which_setting == ST_MAX_ENERGY){
+            max_energy_blocks += 1;
+          }
+        break;
+        default:
+        break;
       }
-    break;
-    case 'a':
-      if(snake.direction != right){
-        snake.energy--;
-        snake.direction = left;
+
+      /* Checks validity of the settings */
+      if(which_setting < 0)
+        which_setting = 0;
+
+      if(which_setting >= ST_COUNT)
+        which_setting = ST_COUNT - 1;
+
+      if(max_energy_blocks < 1)
+        max_energy_blocks = 1;
+
+      if(max_energy_blocks > MAX_ENERGY_BLOCKS_LIMIT)
+          max_energy_blocks = MAX_ENERGY_BLOCKS_LIMIT;
+    } else {
+      switch (c)
+      {
+      case '+':			/* Increase FPS. */
+        if(game_delay * (0.9) > MIN_GAME_DELAY)
+          game_delay *= (0.9);
+      break;
+      case '-':			/* Decrease FPS. */
+        if(game_delay * (1.1) < MAX_GAME_DELAY)
+          game_delay *= (1.1) ;
+      break;
+      case 'q':
+        kill (0, SIGINT);	/* Quit. */
+      break;
+      case 'r':
+        restart_game = 1;	/* Restart game. */
+      break;
+      case 'w':
+        if(snake.lastdirection != down){
+          snake.energy--;
+          snake.direction = up;
+        }
+      break;
+      case 'a':
+        if(snake.lastdirection != right){
+          snake.energy--;
+          snake.direction = left;
+        }
+      break;
+      case 's':
+        if(snake.lastdirection != up){
+          snake.energy--;
+          snake.direction = down;
+        }
+      break;
+      case 'd':
+        if(snake.lastdirection != left){
+          snake.energy--;
+          snake.direction = right;
+        }
+      break;
+      case 'h':
+        which_setting = 0;
+        on_settings = 1; /* Begin settings */
+        break;
+      default:
+      break;
       }
-    break;
-    case 's':
-      if(snake.direction != up){
-        snake.energy--;
-        snake.direction = down;
-      }
-    break;
-    case 'd':
-      if(snake.direction != left){
-        snake.energy--;
-        snake.direction = right;
-      }
-    break;
-    default:
-    break;
     }
   }
 }
@@ -564,13 +752,62 @@ void * userinput ()
 
 /* The main function. */
 
-int main ()
+int main(int argc, char **argv)
 {
+  /* Defaults curr_data_screen to {datarootdir}/ttsnake */
+  char *curr_data_dir = (char *)malloc((strlen(DATADIR "/" ALT_SHORT_NAME) + 1) * sizeof(char));
+  strcpy(curr_data_dir, DATADIR "/" ALT_SHORT_NAME);
+
+  /* Initializes program options struct */
+  const struct option stoptions[] = {
+      {"data", required_argument, 0, 'd'},
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'}};
+
+  char currOpt;
+
+  /* Handles options passed as arguments */
+  while ((currOpt = (getopt_long(argc, argv, "d:h:v", stoptions, NULL))) != -1)
+  {
+    switch (currOpt)
+    {
+    case 'd':
+      /* Changes data_dir to one passed via argument */
+      curr_data_dir = (char *)realloc(curr_data_dir, (strlen(optarg) + 1) * sizeof(char));
+      strcpy(curr_data_dir, optarg);
+      break;
+    case 'h':
+      free(curr_data_dir);
+      show_help(false);
+      break;
+
+    case 'v':
+      free(curr_data_dir);
+      printf (PACKAGE_STRING "\n");
+      exit (EXIT_SUCCESS);
+      break;
+
+    default:
+      free(curr_data_dir);
+      show_help(true);
+    }
+  }
+
+  /* Outputs the data directory being used
+  printf("%s\n", curr_data_dir); */
+
   struct sigaction act;
   int rs;
+  int nscenes;
   pthread_t pthread;
-  char intro_scene[N_INTRO_SCENES][NROWS][NCOLS];
-  char game_scene[N_GAME_SCENES][NROWS][NCOLS];
+  scene_t* intro_scene;
+  scene_t* game_scene;
+
+  game_scene = (scene_t *) malloc(sizeof(*game_scene) * N_GAME_SCENES);
+  if(!game_scene){
+    endwin();
+    sysfatal(!game_scene);
+  }
 
   /* Handle SIGNINT (loop control flag). */
 
@@ -589,6 +826,7 @@ int main ()
 
   movie_delay = 1E5 / 4;	  /* Movie frame duration in usec (40usec) */
   game_delay  = 1E6 / 4;	  /* Game frame duration in usec (4usec) */
+  max_energy_blocks = 3;
 
 
   /* Handle game controls in a different thread. */
@@ -599,29 +837,29 @@ int main ()
 
   /* Play intro. */
 
-  clearscene(intro_scene, N_INTRO_SCENES);
-
-  readscenes (SCENE_DIR_INTRO, intro_scene, N_INTRO_SCENES);
+  nscenes = readscenes (SCENE_DIR_INTRO, curr_data_dir, &intro_scene, 0);
 
   go_on=1;			/* User may skip intro (q). */
 
-  playmovie (intro_scene);
+  playmovie (intro_scene, nscenes);
 
   /* Play game. */
 
-  clearscene(intro_scene, N_GAME_SCENES);
-
-  readscenes (SCENE_DIR_GAME, game_scene, N_GAME_SCENES);
+  readscenes (SCENE_DIR_GAME, curr_data_dir, &game_scene, N_GAME_SCENES);
 
   go_on=1;
   player_lost=0;
   restart_game=0;
+  on_settings=0;
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
-  playgame (game_scene);
+  playgame (game_scene, curr_data_dir);
 
   endwin();
+  free(intro_scene);
+  free(game_scene);
+  free(curr_data_dir);
 
   return EXIT_SUCCESS;
 }

@@ -18,7 +18,10 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/time.h>
+#include "../config.h"
 
 /* Subtract the ‘struct timeval’ values X and Y, storing the result in RESULT.
    Return 1 if the difference is negative, otherwise 0. 
@@ -50,3 +53,16 @@ timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y)
   /* Return 1 if result is negative. */
   return x->tv_sec < y->tv_sec;
 }
+
+/* Shows help screen. Exit code is -1 if isError is set to true */
+
+void show_help(char isError) {
+
+    fprintf(isError? stderr : stdout, "\
+Usage: " BIN_NAME " [options]\n\n\
+  Options\n\n\
+  -h, --help       Display this information message.\n\
+  -d, --data       Selects a non-default data path\n\
+  -v, --version    Outputs the program version\n") ;
+    exit(isError?-1:0) ;
+} 
