@@ -696,6 +696,7 @@ int main(int argc, char **argv)
       break;
 
     case 'v':
+      free(curr_data_dir);
       printf (PACKAGE_STRING "\n");
       exit (EXIT_SUCCESS);
       break;
