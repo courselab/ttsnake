@@ -27,6 +27,7 @@
 #include <pthread.h>
 #include <ncurses.h>
 #include <config.h>
+#include <getopt.h>
 
 #include "utils.h"
 
@@ -130,14 +131,14 @@ typedef char scene_t[NROWS][NCOLS];
 /* Count how many scene files exist in the given directory and returns this number one.
    Complexity: O(log(n)) */
 
-int countfiles(char* dir)
+int countfiles(char* dir, char* data_dir)
 {
   FILE* file;
   char scenefile[1024];
   int k = 1, l;
 
   #define SFOPEN(file) \
-  sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k); \
+  sprintf (scenefile, "%s/%s/scene-%07d.txt", data_dir, dir, k); \
   file = fopen (scenefile, "r");
 
   /* Check if there are any file at all. */
@@ -196,7 +197,7 @@ int countfiles(char* dir)
    then calculate the actual number and allocate appropriate space in
    scene. */
 
-int readscenes (char *dir, scene_t** scene, int nscenes)
+int readscenes (char *dir, char *data_dir, scene_t** scene, int nscenes)
 {
   int i, j, k;
   FILE *file;
@@ -204,7 +205,7 @@ int readscenes (char *dir, scene_t** scene, int nscenes)
 
   if (nscenes == 0)
   {
-    nscenes = countfiles(dir);
+    nscenes = countfiles(dir, data_dir);
     if (nscenes == 0)
     {
         endwin();
@@ -222,7 +223,7 @@ int readscenes (char *dir, scene_t** scene, int nscenes)
     /* Program always read scenes from the installed data path (DATADIR, e.g.
        /usr/share/<dir>. Therefore, if scenes are modified, they should be
        reinstalle (program won't read them from project tree.)  */
-    sprintf (scenefile, DATADIR "/" ALT_SHORT_NAME "/%s/scene-%07d.txt", dir, k+1);
+    sprintf (scenefile, "%s/%s/scene-%07d.txt",data_dir, dir, k+1);
 
     /* Dont know if the line was for debug or not, commenting it
     printf ("Reading from %s\n", scenefile); */
@@ -358,36 +359,44 @@ void showscene (scene_t* scene, int number, int menu)
     }
 }
 
-
-/*This function generates a new set of energy blocks.
-  there are checks to prevent it from spawning blocks
-  on top of the borders and on top of the snake. It is called
-  every max_energy_blocks-th block eaten*/
+/* This function is called whenever a block becomes inactive. It goes through the array of
+ * energy blocks until it finds the inactive block. It then replaces it, and ends.*/
 void more_snacks(){
    /* Generate energy blocks away from the borders and the snake */
- 	int i = 0, j = 0, isValid;
-	/*We generate a new block and check it against every piece of the snake.
-	 if the block is on top of the snake, then we generate a new position
-	 for it. Otherwise, we go to the next block and do it again.*/
-    	do
-  	{
-  	  isValid = 1;
-	  energy_block[i].x = (rand() % (NCOLS - 2)) + 1;
-  	  energy_block[i].y = (rand() % (NROWS - 2)) + 1;
-	  for(j = 0; j < snake.length;j++){
-		  if(energy_block[i].x == snake.positions[j].x && energy_block[i].y == snake.positions[j].y){
-			  isValid = 0;
-			  break;
-		  }
-	  }
-	  if(isValid == 1){
-		  i++;
-	  }
+ 	int i = 0, j, isValid = 0;
 
-  	} while(i < max_energy_blocks);
-        
+	/* Check the array of energy blocks, one by one. If current block is inactive, generate a new
+	 * (x,y) ordered pair of coordinates and make it active again. Check if the new position
+	 * is a valid position(i.e., it's not a position that the snake currently occupies). If
+	 * the new position is not valid, generate a new (x,y) ordered pair and check again. 
+	 * Once an invalid block is replaced, break from the loop.*/ 
+
+	do{
+		if(energy_block[i].x == BLOCK_INACTIVE){
+			do{
+				isValid = 1;
+				energy_block[i].x = (rand() % (NCOLS - 2)) + 1;
+  	  			energy_block[i].y = (rand() % (NROWS - 2)) + 1;
+				for(j = 0; j < snake.length; j++){
+					if(energy_block[i].x == snake.positions[j].x){
+						if(energy_block[i].y== snake.positions[j].y){
+							isValid = 0;
+							/*isValid is being used both as a check to see if
+							the new position is valid, and to see if the inactive block
+							that prompted the funtion call has already been replaced.*/
+							break;
+						}
+					}
+				}
+			}while(isValid != 1);
+		}
+		i++;
+	}while(i < max_energy_blocks && isValid == 0);						
+	
 	return;
 }
+
+
   /* Instantiate the snake and a set of energy blocks. */
 
 /* Put above the showscene function so I could use it to display active blocks on current scene */
@@ -512,9 +521,7 @@ void advance (scene_t* scene)
 			block_count += 1;
 			flag = 1;
 			energy_block[i].x = BLOCK_INACTIVE;
-			if(block_count%max_energy_blocks== 0){
-			       	more_snacks();
-			}
+			more_snacks();
 		}
 	}
 	
@@ -585,7 +592,7 @@ void draw_settings(scene_t *scene){
 
 /* This function implements the gameplay loop. */
 
-void playgame (scene_t* scene)
+void playgame (scene_t* scene, char *data_dir)
 {
 
   struct timespec how_long;
@@ -619,7 +626,7 @@ void playgame (scene_t* scene)
         gettimeofday (&beginning, NULL);
 
         init_game (scene);
-        readscenes (SCENE_DIR_GAME, &scene, N_GAME_SCENES);
+        readscenes (SCENE_DIR_GAME, data_dir, &scene, N_GAME_SCENES);
       }
 
       showscene (scene, /* Show k-th scene. */
@@ -730,8 +737,43 @@ void * userinput ()
 
 /* The main function. */
 
-int main ()
+int main(int argc, char **argv)
 {
+  /* Defaults curr_data_screen to {datarootdir}/ttsnake */
+  char *curr_data_dir = (char *)malloc((strlen(DATADIR "/" ALT_SHORT_NAME) + 1) * sizeof(char));
+  strcpy(curr_data_dir, DATADIR "/" ALT_SHORT_NAME);
+
+  /* Initializes program options struct */
+  const struct option stoptions[] = {
+      {"customDataDir", required_argument, 0, 'd'},
+      {"help", no_argument, 0, 'h'}};
+
+  char currOpt;
+
+  /* Handles options passed as arguments */
+  while ((currOpt = (getopt_long(argc, argv, "d:h", stoptions, NULL))) != -1)
+  {
+    switch (currOpt)
+    {
+    case 'd':
+      /* Changes data_dir to one passed via argument */
+      curr_data_dir = (char *)realloc(curr_data_dir, (strlen(optarg) + 1) * sizeof(char));
+      strcpy(curr_data_dir, optarg);
+      break;
+    case 'h':
+      free(curr_data_dir);
+      show_help(argv[0], false);
+      break;
+
+    default:
+      free(curr_data_dir);
+      show_help(argv[0], true);
+    }
+  }
+
+  /* Outputs the data directory being used
+  printf("%s\n", curr_data_dir); */
+
   struct sigaction act;
   int rs;
   int nscenes;
@@ -773,7 +815,7 @@ int main ()
 
   /* Play intro. */
 
-  nscenes = readscenes (SCENE_DIR_INTRO, &intro_scene, 0);
+  nscenes = readscenes (SCENE_DIR_INTRO, curr_data_dir, &intro_scene, 0);
 
   go_on=1;			/* User may skip intro (q). */
 
@@ -781,7 +823,7 @@ int main ()
 
   /* Play game. */
 
-  readscenes (SCENE_DIR_GAME, &game_scene, N_GAME_SCENES);
+  readscenes (SCENE_DIR_GAME, curr_data_dir, &game_scene, N_GAME_SCENES);
 
   go_on=1;
   player_lost=0;
@@ -790,11 +832,12 @@ int main ()
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
-  playgame (game_scene);
+  playgame (game_scene, curr_data_dir);
 
   endwin();
   free(intro_scene);
   free(game_scene);
+  free(curr_data_dir);
 
   return EXIT_SUCCESS;
 }

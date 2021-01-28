@@ -20,3 +20,7 @@
 SUBDIRS = src scenes
 ACLOCAL_AMFLAGS = -I m4
 
+run: all
+	./src/ttsnake --customDataDir ./scenes
+
+.PHONY: run 

@@ -18,6 +18,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/time.h>
 
 /* Subtract the ‘struct timeval’ values X and Y, storing the result in RESULT.
@@ -50,3 +52,14 @@ timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y)
   /* Return 1 if result is negative. */
   return x->tv_sec < y->tv_sec;
 }
+
+/* Shows help screen. Exit code is -1 if isError is set to true */
+
+void show_help(char *program_name, char isError) {
+
+    fprintf(isError? stderr : stdout, "\
+[usage] %s [options]\n\
+  -h, --help          Display this information.\n\
+  -d, --customDataDir Sets the data directory. (Default is {install dir}/share/ttsnake)\n", program_name) ;
+    exit(isError?-1:0) ;
+} 
