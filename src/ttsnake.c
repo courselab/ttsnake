@@ -674,13 +674,14 @@ int main(int argc, char **argv)
 
   /* Initializes program options struct */
   const struct option stoptions[] = {
-      {"customDataDir", required_argument, 0, 'd'},
-      {"help", no_argument, 0, 'h'}};
+      {"data", required_argument, 0, 'd'},
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'}};
 
   char currOpt;
 
   /* Handles options passed as arguments */
-  while ((currOpt = (getopt_long(argc, argv, "d:h", stoptions, NULL))) != -1)
+  while ((currOpt = (getopt_long(argc, argv, "d:h:v", stoptions, NULL))) != -1)
   {
     switch (currOpt)
     {
@@ -691,12 +692,17 @@ int main(int argc, char **argv)
       break;
     case 'h':
       free(curr_data_dir);
-      show_help(argv[0], false);
+      show_help(false);
+      break;
+
+    case 'v':
+      printf (PACKAGE_STRING "\n");
+      exit (EXIT_SUCCESS);
       break;
 
     default:
       free(curr_data_dir);
-      show_help(argv[0], true);
+      show_help(true);
     }
   }
 

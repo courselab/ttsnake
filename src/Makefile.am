@@ -21,12 +21,26 @@ AM_CPPFLAGS = @CPP_FLAGS@ -DDATADIR=\"@datarootdir@\" -DBINDIR=\"@bindir@\"
 AM_CFLAGS =   @C_FLAGS@ 
 AM_LDFLAGS =  @LD_FLAGS@   
 
-bin_PROGRAMS = ttsnake 
+bin_PROGRAMS = ttsnake.bin 
 
-ttsnake_SOURCES = ttsnake.c utils.c  utils.h 
+ttsnake_bin_SOURCES = ttsnake.c utils.c  utils.h 
 
-ttsnake_CC = @PTHREAD_CC@
-ttsnake_CFLAGS = @PTHREAD_CFLAGS@ 
-ttsnake_LDADD = -lncurses $(LIBOBJS) @PTHREAD_LIBS@ 
+ttsnake_bin_CC = @PTHREAD_CC@
+ttsnake_bin_CFLAGS = @PTHREAD_CFLAGS@ 
+ttsnake_bin_LDADD = -lncurses $(LIBOBJS) @PTHREAD_LIBS@ 
 
+bin_SCRIPTS = ttsnake
 
+ttsnake: ttsnake.sh
+	cp $< $@
+
+clean-local:
+	rm -f ttsnake
+
+install-exec-hook: 
+	cd $(DESTDIR)/$(bindir) && mv ttsnake.bin ttsnake
+
+uninstall-hook:
+	rm -f $(DESTDIR)/$(bindir)/ttsnake
+
+EXTRA_DIST = ttsnake.sh

@@ -1,41 +1,107 @@
 # Contributing to this project
 
 This document needs to be properly edited.
+Meanwhile, there follow some essencial notes.
 
-## Meanwhile, these are some essencial notes
+## General information
 
-* This project's development workflow is based on 
-
-
->> GitFlow branching strategy [1]
-
->> Semantiv versionng 2.0.0 release naming scheme [2]
-
-- If you obtain the source from the Version Control Repository [3], you will
-need GNU Build System (aka Autotools) to build the project (note 1)
+TextTron Snake is free software distributed under GNU GPL vr.3. 
+For licensing and author information, please refer to files COPYING 
+and AUTHORS, respectively.
 
 
-- Latest stabe release resides in _main_ branch.
-Pre-release (alpha, beta, release candidates) reside on branch _prerelease_.
 
 
-- Contribution admission policy requires developers to proposed modifications
+## Obtaining the source and building the software
+
+This project's  source code official repository may be found at 
+
+https://github.com/courselab/ttsnake
+
+If you have obtain the source from the Version Control Repository, you will
+need GNU Build System (aka Autotools) to build the project, as described
+in file `README`, in the root of the project tree (really, reade-me). 
+
+Briefly, bootstrap the build system with
+
+```
+$ ./autogen.sh
+```
+
+to create the build configuration script and then build the software with
+
+```
+$ ./configure 
+$ make
+```
+
+After the software is built, the binary may be found in the subdirectiry `src`.
+
+The file 
+
+```
+src/ttsnake
+```
+
+is actually a wrapper script wich invokes the real binary 
+
+```
+src/ttsnake.bin
+```
+
+with appropirate arguments to read data files from the local subdirectory 'scenes'.
+
+In order to install the software,
+
+```
+$ make install
+```
+This command will copy the file `src/ttsnake.bin` to the system binary path, 
+usually `usr/bin` and invoke a install hook to rename it `ttsnake`. The
+installed binary will read data from the system data path, usually `usr/share`.
+
+To install the software in a different location, use 
+
+```
+$ ./configure --prefix=<some-path>
+$ make
+```
+
+More build and install options may be consulted in
+
+```
+$ ./configure --help
+```
+and in the file `INSTALL`, found in the root of the project tree.
+
+## General guidelines
+
+This project's development workflow is based 
+
+* GitFlow branching strategy [1]
+* Semantiv versionng 2.0.0 release naming scheme [2]
+
+Latest stabe release resides in branch `main`, while pre-releases (alpha, 
+beta, release candidates etc.) reside in branch _prerelease_. Late fixes in
+past stabe releases for maintenance, if any, are found in _legacy_ branhces.
+
+Contribution admission policy requires developers to proposed modifications
 as feature branches and submitted them as pull requests, which in turn
 need to be approved by other developers before being merged into the propper 
 branches.
 
+You are strongly encouraged to write your contribution and communicate
+with the developers and contributors community in English, if possible.
+Do not mind at all if your current skills are modest or incipient; no one
+expects otherwise --- your coding skills and willing to help matter more.
+Use a automatic translator if needed. Just don't name variable and 
+functions in a lnauguage other than English.
 
-- If you are a developer and is assinged an issue, and you believe you are not
+If you are a developer and is assinged an issue, and you believe you are not
 able to handle timely, please, try to reasign it to someone else.
 
-
-- Program reads data from installed files. Therefore, if data is modified
-(e.g. scene files), remember to reinstall (note 2) the project with 
-
-```
-make install
-```
-
+If you don't have direct write access to the repository, you may still fork the
+project and send pull requests.
 
 _Code wisdom for this project_
 
@@ -48,15 +114,5 @@ _Code wisdom for this project_
 
 [2] https://semver.org/
 
-[3] https://github.com/courselab/ttsnake
 
-Notes
 
-(1) A distribution repository with tarballs with pre-build configuration
-scripts (does not need Autotools) should be available upon the first
-stable release.
-
-(2) The alternative to it would be to have a wrapper script in `src` which
-would invoke the binary with some command line option choosing a different
-data path, while the install rule would install the plain binary. This is
-left for future enhancements if ever wished.
