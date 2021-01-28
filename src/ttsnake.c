@@ -357,29 +357,6 @@ void showscene (scene_t* scene, int number, int menu)
  * energy blocks until it finds the inactive block. It then replaces it, and ends.*/
 void more_snacks(){
    /* Generate energy blocks away from the borders and the snake */
-
- 	int i = 0, j = 0, isValid;
-	/*We generate a new block and check it against every piece of the snake.
-	 if the block is on top of the snake, then we generate a new position
-	 for it. Otherwise, we go to the next block and do it again.*/
-    	do
-  	{
-  	  isValid = 1;
-	    energy_block[i].x = (rand() % (NCOLS - 2)) + 1;
-  	  energy_block[i].y = (rand() % (NROWS - 2)) + 1;
-	  for(j = 0; j < snake.length;j++){
-		  if(energy_block[i].x == snake.positions[j].x && energy_block[i].y == snake.positions[j].y){
-			  isValid = 0;
-			  break;
-		  }
-	  }
-	  if(isValid == 1){
-		  i++;
-	  }
-
-  	}while(i < MAX_ENERGY_BLOCKS);
-
-=======
  	int i = 0, j, isValid = 0;
 
 	/* Check the array of energy blocks, one by one. If current block is inactive, generate a new
