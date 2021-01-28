@@ -96,6 +96,7 @@ struct snake_st
   int length;			 /* The snake length (including head). */
   pair_t *positions;	/* Position of each body part of the snake. */
   direction_t direction;	 /* Movement direction. */
+  int energy; /*Energy of moviments */
 };
 
 snake_t snake;			/* The snake istance. */
@@ -270,8 +271,8 @@ void showscene (char scene[][NROWS][NCOLS], int number, int menu)
 	      (int) elapsed_total.tv_sec, fps);
       /*Add to the menu score and blocks collected */	  
       printf ("Score: %.2f\r\n", score);
+      printf ("Energy: %d\r\n", snake.energy);
       printf ("Blocks: %d\r\n", block_count);  
-	  
       printf ("Controls: q: quit | r: restart\r\n");
     }
 }
@@ -290,7 +291,7 @@ void init_game (char scene[][NROWS][NCOLS])
   /*Set initial score and blocks collected 0 */
   score = 0;
   block_count = 0;
-	
+	snake.energy = 20;
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
@@ -401,14 +402,16 @@ void advance (char scene[][NROWS][NCOLS])
 			block_count += 1;
 			flag = 1;
 			energy_block[i].x = BLOCK_INACTIVE;
+      snake.energy+= 10;
 		}
 	}
 	
 
-  /* Check if head collided with border or itself */
+  /* Check if head collided with border or itself or your energy is empty*/
   if(   head.x <= 0 || head.x >= NCOLS - 1
      || head.y <= 0 || head.y >= NROWS - 1
-     || scene[0][head.y][head.x] == SNAKE_BODY)
+     || scene[0][head.y][head.x] == SNAKE_BODY
+     || snake.energy == 0)
   {
       player_lost = 1;
       return;
@@ -529,20 +532,28 @@ void * userinput ()
       restart_game = 1;	/* Restart game. */
     break;
     case 'w':
-      if(snake.direction != down)
+      if(snake.direction != down){
+        snake.energy--;
         snake.direction = up;
+      }
     break;
     case 'a':
-      if(snake.direction != right)
+      if(snake.direction != right){
+        snake.energy--;
         snake.direction = left;
+      }
     break;
     case 's':
-      if(snake.direction != up)
+      if(snake.direction != up){
+        snake.energy--;
         snake.direction = down;
+      }
     break;
     case 'd':
-      if(snake.direction != left)
+      if(snake.direction != left){
+        snake.energy--;
         snake.direction = right;
+      }
     break;
     default:
     break;
