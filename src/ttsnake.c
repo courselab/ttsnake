@@ -33,7 +33,7 @@
 
 /* Game defaults */
 
-#define N_GAME_SCENES  2	/* Number of frames of the gamepay scnene. */
+#define N_GAME_SCENES  3	/* Number of frames of the gamepay scnene. */
 
 #define NCOLS 90		/* Number of columns of the scene. */
 #define NROWS 40		/* Number of rows of the scene. */
@@ -49,7 +49,7 @@
 #define SNAKE_HEAD	 '0'	 /* Character to draw the snake head. */
 #define ENERGY_BLOCK     '+'	 /* Character to draw the energy block. */
 
-#define MAX_ENERGY_BLOCKS 3	/* Maximum number of energy blocks. */
+#define MAX_ENERGY_BLOCKS_LIMIT 50	/* Limit on the maximum number of energy blocks. */
 
 #define MIN_GAME_DELAY 10200
 #define MAX_GAME_DELAY 94000
@@ -68,6 +68,15 @@ int game_delay;			/* How long between game scenes. */
 int go_on; 			/* Whether to continue or to exit main loop.*/
 int player_lost;
 int restart_game; /* Whether the user has pressed to restart the game or not */
+int on_settings; /* Whether the user is currently changing settings */
+int max_energy_blocks; /* Max number of energy blocks to display at once */
+
+enum settings_t {
+  ST_MAX_ENERGY = 0,    /* '= 0' ensures sequential counting from 0 */
+  ST_COUNT
+};
+
+int which_setting; /* Which setting the player is currently configuring */
 
 int block_count; 		/*Number of energy blocks collected */
 float score;     		/* Score: average blocks / time */
@@ -95,7 +104,9 @@ struct snake_st
   pair_t head;			 /* The snake's head. */
   int length;			 /* The snake length (including head). */
   pair_t *positions;	/* Position of each body part of the snake. */
-  direction_t direction;	 /* Movement direction. */
+  direction_t direction, /* Movement direction. */
+              lastdirection; /* Valid movement control */
+  int energy; /*Energy of movements */
 };
 
 snake_t snake;			/* The snake istance. */
@@ -106,7 +117,7 @@ struct
 {
   int x;			/* Coordinate x of the energy block. */
   int y;			/* Coordinate y of the energy block. */
-} energy_block[MAX_ENERGY_BLOCKS]; /* Array of energy blocks. */
+} energy_block[MAX_ENERGY_BLOCKS_LIMIT]; /* Array of energy blocks. */
 
 /* Load all scenes from dir into the scene vector.
 
@@ -325,11 +336,9 @@ void showscene (scene_t* scene, int number, int menu)
     timeval_subtract (&elapsed_total, &now, &beginning);
   }
 
-  /* Displays active energy blocks */
-
-  for (i=0; i<MAX_ENERGY_BLOCKS; i++)
-    if(energy_block[i].x != BLOCK_INACTIVE) scene[number][energy_block[i].y][energy_block[i].x] = ENERGY_BLOCK;
-
+  for (i=0; i<max_energy_blocks; i++)
+    if(energy_block[i].x != BLOCK_INACTIVE)
+        scene[number][energy_block[i].y][energy_block[i].x] = ENERGY_BLOCK;
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
   
@@ -345,12 +354,13 @@ void showscene (scene_t* scene, int number, int menu)
 	      (int) elapsed_total.tv_sec, fps);
       /*Add to the menu score and blocks collected */	  
       printf ("Score: %.2f\r\n", score);
+      printf ("Energy: %d\r\n", snake.energy);
       printf ("Blocks: %d\r\n", block_count);  
 	  
       printf ("Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\r\n");
+      printf ("          h: help & settings\r\n");
     }
 }
-
 
 /* This function is called whenever a block becomes inactive. It goes through the array of
  * energy blocks until it finds the inactive block. It then replaces it, and ends.*/
@@ -384,8 +394,8 @@ void more_snacks(){
 			}while(isValid != 1);
 		}
 		i++;
-	}while(i < MAX_ENERGY_BLOCKS && isValid == 0);						
-    	
+	}while(i < max_energy_blocks && isValid == 0);						
+	
 	return;
 }
 
@@ -403,10 +413,11 @@ void init_game (scene_t* scene)
   /*Set initial score and blocks collected 0 */
   score = 0;
   block_count = 0;
-	
+	snake.energy = 20;
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
+  snake.lastdirection = snake.direction;
   snake.length = 7;
 
 	const pair_t initialPosition[] = {
@@ -429,7 +440,7 @@ void init_game (scene_t* scene)
 	}
 
    /* Generate energy blocks away from the borders */
-  for (i=0; i<MAX_ENERGY_BLOCKS; i++)
+  for (i=0; i<max_energy_blocks; i++)
   {
     energy_block[i].x = (rand() % (NCOLS - 2)) + 1 ;
     energy_block[i].y = (rand() % (NROWS - 2)) + 1;
@@ -506,24 +517,32 @@ void advance (scene_t* scene)
 			break;
 	}
 
+	/* Lose energy when necessary */
+	if(snake.lastdirection != snake.direction && player_lost == 0){
+      snake.energy--;
+	}
+
+	snake.lastdirection = snake.direction;
+
 	/*When the head position is the same as the energy block*/
-	for(i = 0; i < MAX_ENERGY_BLOCKS; i++)
+	for(i = 0; i < max_energy_blocks; i++)
 	{
 		if(head.x == energy_block[i].x && head.y == energy_block[i].y)
 		{
 			block_count += 1;
 			flag = 1;
 			energy_block[i].x = BLOCK_INACTIVE;
+      snake.energy+= 10;
 			more_snacks();
-			
 		}
 	}
 	
 
-  /* Check if head collided with border or itself */
+  /* Check if head collided with border or itself or your energy is empty*/
   if(   head.x <= 0 || head.x >= NCOLS - 1
      || head.y <= 0 || head.y >= NROWS - 1
-     || scene[0][head.y][head.x] == SNAKE_BODY)
+     || scene[0][head.y][head.x] == SNAKE_BODY
+     || snake.energy == 0)
   {
       player_lost = 1;
       return;
@@ -570,6 +589,19 @@ void playmovie (scene_t* scene, int nscenes)
     }
 }
 
+void draw_settings(scene_t *scene){
+  char buffer[NCOLS];
+  int i;
+
+  /* clean buffer */
+  for(i = 0; i < NCOLS; i++)
+    buffer[i] = ' ';
+
+  sprintf(buffer, "%.15s %c %3d %c     Maximum number of blocks to display at the same time.",
+          "", which_setting == 0 ? '<' : ' ', max_energy_blocks, which_setting == 0 ? '>' : ' ');
+  memcpy(&scene[2][22][12], buffer, strlen(buffer));
+}
+
 
 /* This function implements the gameplay loop. */
 
@@ -586,7 +618,11 @@ void playgame (scene_t* scene, char *data_dir)
       clear ();                               /* Clear screen. */
       refresh ();			      /* Refresh screen. */
 
-      advance (scene);		               /* Advance game.*/
+      if(!on_settings) {
+        advance (scene);		               /* Advance game.*/
+      } else {
+        draw_settings(scene);
+      }
 
       if(player_lost){
         /* Write score on the scene */
@@ -606,8 +642,9 @@ void playgame (scene_t* scene, char *data_dir)
         readscenes (SCENE_DIR_GAME, data_dir, &scene, N_GAME_SCENES);
       }
 
-      /* Below is equivalent to 'showscene(scene, player_lost ? 1 : 0, 1);' but more efficient. */
-      showscene (scene, player_lost, 1);                /* Show k-th scene. */
+      showscene (scene, /* Show k-th scene. */
+        player_lost ? 1 : on_settings ? 2 : 0,
+        on_settings ? 0 : 1);
 
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	      /* Apply delay. */
@@ -625,40 +662,91 @@ void * userinput ()
   while (1)
   {
     c = getchar();
-    switch (c)
+
+    if(on_settings)
     {
-    case '+':			/* Increase FPS. */
-      if(game_delay * (0.9) > MIN_GAME_DELAY)
-        game_delay *= (0.9);
-    break;
-    case '-':			/* Decrease FPS. */
-      if(game_delay * (1.1) < MAX_GAME_DELAY)
-        game_delay *= (1.1) ;
-    break;
-    case 'q':
-      kill (0, SIGINT);	/* Quit. */
-    break;
-    case 'r':
-      restart_game = 1;	/* Restart game. */
-    break;
-    case 'w':
-      if(snake.direction != down)
-        snake.direction = up;
-    break;
-    case 'a':
-      if(snake.direction != right)
-        snake.direction = left;
-    break;
-    case 's':
-      if(snake.direction != up)
-        snake.direction = down;
-    break;
-    case 'd':
-      if(snake.direction != left)
-        snake.direction = right;
-    break;
-    default:
-    break;
+      switch(c)
+      {
+        case 'q':
+          on_settings=0;
+          restart_game=1;
+        break;
+        case 'w':
+          which_setting -= 1;
+        break;
+        case 's':
+          which_setting += 1;
+        break;
+        case 'a':
+          if(which_setting == ST_MAX_ENERGY){
+            max_energy_blocks -= 1;
+          }
+        break;
+        case 'd':
+          if(which_setting == ST_MAX_ENERGY){
+            max_energy_blocks += 1;
+          }
+        break;
+        default:
+        break;
+      }
+
+      /* Checks validity of the settings */
+      if(which_setting < 0)
+        which_setting = 0;
+
+      if(which_setting >= ST_COUNT)
+        which_setting = ST_COUNT - 1;
+
+      if(max_energy_blocks < 1)
+        max_energy_blocks = 1;
+
+      if(max_energy_blocks > MAX_ENERGY_BLOCKS_LIMIT)
+          max_energy_blocks = MAX_ENERGY_BLOCKS_LIMIT;
+    } else {
+      switch (c)
+      {
+      case '+':			/* Increase FPS. */
+        if(game_delay * (0.9) > MIN_GAME_DELAY)
+          game_delay *= (0.9);
+      break;
+      case '-':			/* Decrease FPS. */
+        if(game_delay * (1.1) < MAX_GAME_DELAY)
+          game_delay *= (1.1) ;
+      break;
+      case 'q':
+        kill (0, SIGINT);	/* Quit. */
+      break;
+      case 'r':
+        restart_game = 1;	/* Restart game. */
+      break;
+      case 'w':
+        if(snake.lastdirection != down){
+          snake.direction = up;
+        }
+      break;
+      case 'a':
+        if(snake.lastdirection != right){
+          snake.direction = left;
+        }
+      break;
+      case 's':
+        if(snake.lastdirection != up){
+          snake.direction = down;
+        }
+      break;
+      case 'd':
+        if(snake.lastdirection != left){
+          snake.direction = right;
+        }
+      break;
+      case 'h':
+        which_setting = 0;
+        on_settings = 1; /* Begin settings */
+        break;
+      default:
+      break;
+      }
     }
   }
 }
@@ -674,13 +762,14 @@ int main(int argc, char **argv)
 
   /* Initializes program options struct */
   const struct option stoptions[] = {
-      {"customDataDir", required_argument, 0, 'd'},
-      {"help", no_argument, 0, 'h'}};
+      {"data", required_argument, 0, 'd'},
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'}};
 
   char currOpt;
 
   /* Handles options passed as arguments */
-  while ((currOpt = (getopt_long(argc, argv, "d:h", stoptions, NULL))) != -1)
+  while ((currOpt = (getopt_long(argc, argv, "d:h:v", stoptions, NULL))) != -1)
   {
     switch (currOpt)
     {
@@ -691,12 +780,18 @@ int main(int argc, char **argv)
       break;
     case 'h':
       free(curr_data_dir);
-      show_help(argv[0], false);
+      show_help(false);
+      break;
+
+    case 'v':
+      free(curr_data_dir);
+      printf (PACKAGE_STRING "\n");
+      exit (EXIT_SUCCESS);
       break;
 
     default:
       free(curr_data_dir);
-      show_help(argv[0], true);
+      show_help(true);
     }
   }
 
@@ -733,6 +828,7 @@ int main(int argc, char **argv)
 
   movie_delay = 1E5 / 4;	  /* Movie frame duration in usec (40usec) */
   game_delay  = 1E6 / 4;	  /* Game frame duration in usec (4usec) */
+  max_energy_blocks = 3;
 
 
   /* Handle game controls in a different thread. */
@@ -756,6 +852,7 @@ int main(int argc, char **argv)
   go_on=1;
   player_lost=0;
   restart_game=0;
+  on_settings=0;
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
