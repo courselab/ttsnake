@@ -516,6 +516,12 @@ void advance (scene_t* scene)
 			head.y += 1;
 			break;
 	}
+
+	/* Lose energy when necessary */
+	if(snake.lastdirection != snake.direction && player_lost == 0){
+      snake.energy--;
+	}
+
 	snake.lastdirection = snake.direction;
 
 	/*When the head position is the same as the energy block*/
@@ -716,25 +722,21 @@ void * userinput ()
       break;
       case 'w':
         if(snake.lastdirection != down){
-          snake.energy--;
           snake.direction = up;
         }
       break;
       case 'a':
         if(snake.lastdirection != right){
-          snake.energy--;
           snake.direction = left;
         }
       break;
       case 's':
         if(snake.lastdirection != up){
-          snake.energy--;
           snake.direction = down;
         }
       break;
       case 'd':
         if(snake.lastdirection != left){
-          snake.energy--;
           snake.direction = right;
         }
       break;
