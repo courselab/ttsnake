@@ -828,8 +828,8 @@ int main(int argc, char **argv)
 
   /* Default values. */
 
-  movie_delay = 1E5 / 4;	  /* Movie frame duration in usec (40usec) */
-  game_delay  = 1E6 / 4;	  /* Game frame duration in usec (4usec) */
+  movie_delay = 2.5E4;	  /* Movie frame duration in usec (40usec) */
+  game_delay  = 2.5E5;	  /* Game frame duration in usec (4usec) */
   max_energy_blocks = 3;
 
 
