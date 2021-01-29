@@ -28,6 +28,7 @@
 #include <ncurses.h>
 #include <config.h>
 #include <getopt.h>
+#include <math.h>
 
 #include "utils.h"
 
@@ -408,7 +409,7 @@ void init_game (scene_t* scene)
   srand(time(NULL));
   /*Set initial score and blocks collected 0 */
   block_count = 0;
-  snake.energy = 20;
+  snake.energy = (NCOLS + NROWS);
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
@@ -512,10 +513,9 @@ void advance (scene_t* scene)
 			break;
 	}
 
-	/* Lose energy when necessary */
-	if(snake.lastdirection != snake.direction && player_lost == 0){
-      snake.energy--;
-	}
+	/* Lose energy at every step */
+	if(player_lost == 0)
+    	snake.energy--;
 
 	snake.lastdirection = snake.direction;
 
@@ -527,7 +527,7 @@ void advance (scene_t* scene)
 			block_count += 1;
 			flag = 1;
 			energy_block[i].x = BLOCK_INACTIVE;
-      snake.energy+= 10;
+			snake.energy += (NCOLS + NROWS) / 2 * (sqrt(2) / sqrt(max_energy_blocks + 1));
 			more_snacks();
 		}
 	}
@@ -537,7 +537,7 @@ void advance (scene_t* scene)
   if(   head.x <= 0 || head.x >= NCOLS - 1
      || head.y <= 0 || head.y >= NROWS - 1
      || scene[0][head.y][head.x] == SNAKE_BODY
-     || snake.energy == 0)
+     || snake.energy <= 0)
   {
       player_lost = 1;
       return;

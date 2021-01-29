@@ -27,7 +27,7 @@ ttsnake_bin_SOURCES = ttsnake.c utils.c  utils.h
 
 ttsnake_bin_CC = @PTHREAD_CC@
 ttsnake_bin_CFLAGS = @PTHREAD_CFLAGS@ 
-ttsnake_bin_LDADD = -lncurses $(LIBOBJS) @PTHREAD_LIBS@ 
+ttsnake_bin_LDADD = -lncurses -lm $(LIBOBJS) @PTHREAD_LIBS@ 
 
 bin_SCRIPTS = ttsnake
 
