@@ -33,7 +33,7 @@
 
 /* Game defaults */
 
-#define N_GAME_SCENES  3	/* Number of frames of the gamepay scnene. */
+#define N_GAME_SCENES  4	/* Number of frames of the gamepay scnene. */
 
 #define NCOLS 90		/* Number of columns of the scene. */
 #define NROWS 40		/* Number of rows of the scene. */
@@ -68,6 +68,7 @@ int game_delay;			/* How long between game scenes. */
 int go_on; 			/* Whether to continue or to exit main loop.*/
 int player_lost;
 int restart_game; /* Whether the user has pressed to restart the game or not */
+int pause_game; /* Whether the user has pressed to pause the game or not */
 int on_settings; /* Whether the user is currently changing settings */
 int max_energy_blocks; /* Max number of energy blocks to display at once */
 
@@ -620,9 +621,9 @@ void playgame (scene_t* scene, char *data_dir)
       clear ();                               /* Clear screen. */
       refresh ();			      /* Refresh screen. */
 
-      if(!on_settings) {
+      if(!on_settings && !pause_game) {
         advance (scene);		               /* Advance game.*/
-      } else {
+      } else if (!on_settings) {
         draw_settings(scene);
       }
 
@@ -638,6 +639,7 @@ void playgame (scene_t* scene, char *data_dir)
         go_on=1;
         player_lost=0;
         restart_game=0;
+        pause_game=0;
         gettimeofday (&beginning, NULL);
 
         init_game (scene);
@@ -645,7 +647,7 @@ void playgame (scene_t* scene, char *data_dir)
       }
 
       showscene (scene, /* Show k-th scene. */
-        player_lost ? 1 : on_settings ? 2 : 0,
+        player_lost ? 1 : on_settings ? 2 : pause_game ? 3 : 0,
         on_settings ? 0 : 1);
 
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
@@ -721,6 +723,9 @@ void * userinput ()
       break;
       case 'r':
         restart_game = 1;	/* Restart game. */
+      break;
+      case 'p':
+        pause_game = pause_game ? 0 : 1;	/* Pause or resume game. */
       break;
       case 'w':
         if(snake.lastdirection != down){
@@ -854,6 +859,7 @@ int main(int argc, char **argv)
   go_on=1;
   player_lost=0;
   restart_game=0;
+  pause_game=0;
   on_settings=0;
   gettimeofday (&beginning, NULL);
 
