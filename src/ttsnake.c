@@ -79,7 +79,7 @@ enum settings_t {
 int which_setting; /* Which setting the player is currently configuring */
 
 int block_count; 		/*Number of energy blocks collected */
-float score;     		/* Score: average blocks / time */
+
 
 /* SIGINT handler. The variable go_on controls the main loop. */
 
@@ -344,20 +344,14 @@ void showscene (scene_t* scene, int number, int menu)
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
   
-  /*Calculate score based on time*/
-  if (elapsed_total.tv_sec != 0)
-  {
-    score = (block_count / (float) (elapsed_total.tv_sec));
-  }
 
   if (menu)
     {
       printf ("Elapsed: %5ds, fps=%5.2f\r\n", /* CR-LF because of ncurses. */
 	      (int) elapsed_total.tv_sec, fps);
       /*Add to the menu score and blocks collected */	  
-      printf ("Score: %.2f\r\n", score);
-      printf ("Energy: %d\r\n", snake.energy);
-      printf ("Blocks: %d\r\n", block_count);  
+      printf ("Score: %.d\r\n", block_count);
+      printf ("Energy: %d\r\n", snake.energy); 
 	  
       printf ("Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\r\n");
       printf ("          h: help & settings\r\n");
@@ -413,9 +407,8 @@ void init_game (scene_t* scene)
 	
   srand(time(NULL));
   /*Set initial score and blocks collected 0 */
-  score = 0;
   block_count = 0;
-	snake.energy = 20;
+  snake.energy = 20;
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
@@ -439,8 +432,8 @@ void init_game (scene_t* scene)
 		snake.positions[i].y = initialPosition[i].y;
 
 		scene[0][initialPosition[i].y][initialPosition[i].x] = SNAKE_BODY;
-	}
 
+	}
    /* Generate energy blocks away from the borders */
   for (i=0; i<max_energy_blocks; i++)
   {
@@ -629,7 +622,7 @@ void playgame (scene_t* scene, char *data_dir)
       if(player_lost){
         /* Write score on the scene */
         char buffer[128];
-        sprintf(buffer, "%.2f", score);
+        sprintf(buffer, "%d", block_count);
         memcpy(&scene[1][27][30], buffer, strlen(buffer));
       }
 
@@ -658,7 +651,7 @@ void playgame (scene_t* scene, char *data_dir)
 /* Process user input.
    This function runs in a separate thread. */
 
-void * userinput ()
+void * userinput()
 {
   int c;
   while (1)
@@ -751,6 +744,7 @@ void * userinput ()
       }
     }
   }
+  return NULL;
 }
 
 
