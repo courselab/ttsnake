@@ -54,6 +54,22 @@ timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y)
   return x->tv_sec < y->tv_sec;
 }
 
+/* Add the ‘struct timeval’ values X and Y, storing the result in RESULT. */
+
+void
+timeval_add (struct timeval *result, struct timeval *x, struct timeval *y)
+{
+  /* Add the seconds and microseconds. */
+  result->tv_sec = x->tv_sec + y->tv_sec;
+  result->tv_usec = x->tv_usec + y->tv_usec;
+
+  /* Check if microseconds complete a second or not. */
+  if (result->tv_usec > 1000000) {
+    result->tv_sec++;
+    result->tv_usec -= 1000000;
+  }
+}
+
 /* Shows help screen. Exit code is -1 if isError is set to true */
 
 void show_help(char isError) {
