@@ -744,7 +744,7 @@ void * userinput()
       }
     }
   }
-  return;
+  return NULL;
 }
 
 
