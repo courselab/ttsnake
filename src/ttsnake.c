@@ -335,6 +335,7 @@ void showscene (scene_t* scene, int number, int menu)
   if(!player_lost && !pause_game) {
     timeval_subtract (&elapsed_last, &now, &before);
 
+    /* elapsed_total = now - beginning + time before game is paused */
     timeval_subtract (&elapsed_total, &now, &beginning);
     timeval_add(&elapsed_total, &elapsed_total, &elapsed_pause);
   }
@@ -363,7 +364,7 @@ void showscene (scene_t* scene, int number, int menu)
       printf ("Blocks: %d\r\n", block_count);  
 	  
       printf ("Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\r\n");
-      printf ("          h: help & settings\r\n");
+      printf ("          h: help & settings | p: pause game\r\n");
     }
 }
 
@@ -731,9 +732,11 @@ void * userinput ()
       break;
       case 'p':
         if (pause_game) {
+           /* set beginning to current time and resume game */ 
           gettimeofday (&beginning, NULL);
           pause_game = 0;
         } else {
+          /* set elapsed_pause to elapsed_total when player press 'p' and pause the game */
           memcpy (&elapsed_pause, &elapsed_total, sizeof (struct timeval));
           pause_game = 1;
         }
