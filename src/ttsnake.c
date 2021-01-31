@@ -60,7 +60,8 @@ struct timeval beginning,	/* Time when game started. */
   now,				/* Time now. */
   before,			/* Time in the last frame. */
   elapsed_last,			/* Elapsed time since last frame. */
-  elapsed_total;		/* Elapsed time since game baginning. */
+  elapsed_total,		/* Elapsed time since game baginning. */
+  elapsed_pause;		/* Elapsed time total when the player press pause. */
 
 
 int movie_delay;		/* How long between move scenes scenes. */
@@ -331,10 +332,11 @@ void showscene (scene_t* scene, int number, int menu)
   memcpy (&before, &now, sizeof (struct timeval));
   gettimeofday (&now, NULL);
 
-  if(!player_lost) {
+  if(!player_lost && !pause_game) {
     timeval_subtract (&elapsed_last, &now, &before);
 
     timeval_subtract (&elapsed_total, &now, &beginning);
+    timeval_add(&elapsed_total, &elapsed_total, &elapsed_pause);
   }
 
   if(number == 0){
@@ -449,6 +451,9 @@ void init_game (scene_t* scene)
     energy_block[i].y = (rand() % (NROWS - 2)) + 1;
   }
 
+  /* Set to zero elapsed_total when the player pressed pause */
+  elapsed_pause.tv_sec = 0;
+  elapsed_pause.tv_usec = 0;
 }
 
 /* This function increases the snake's size by one.
@@ -725,7 +730,13 @@ void * userinput ()
         restart_game = 1;	/* Restart game. */
       break;
       case 'p':
-        pause_game = pause_game ? 0 : 1;	/* Pause or resume game. */
+        if (pause_game) {
+          gettimeofday (&beginning, NULL);
+          pause_game = 0;
+        } else {
+          memcpy (&elapsed_pause, &elapsed_total, sizeof (struct timeval));
+          pause_game = 1;
+        }
       break;
       case 'w':
         if(snake.lastdirection != down){
