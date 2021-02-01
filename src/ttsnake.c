@@ -622,7 +622,7 @@ void playgame (scene_t* scene, char *data_dir)
 
       if(!on_settings && !pause_game) {
         advance (scene);		               /* Advance game.*/
-      } else if (!on_settings) {
+      } else if (on_settings) {
         draw_settings(scene);
       }
 
