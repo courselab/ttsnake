@@ -33,7 +33,7 @@
 
 /* Game defaults */
 
-#define N_GAME_SCENES  3	/* Number of frames of the gamepay scnene. */
+#define N_GAME_SCENES  4	/* Number of frames of the gamepay scnene. */
 
 #define NCOLS 90		/* Number of columns of the scene. */
 #define NROWS 40		/* Number of rows of the scene. */
@@ -50,9 +50,10 @@
 #define ENERGY_BLOCK     '+'	 /* Character to draw the energy block. */
 
 #define MAX_ENERGY_BLOCKS_LIMIT 50	/* Limit on the maximum number of energy blocks. */
+#define MAX_SNAKE_ENERGY (NCOLS+NROWS) /* Limit on how much energy the snake can store.*/
 
 #define MIN_GAME_DELAY 10200
-#define MAX_GAME_DELAY 94000
+#define MAX_GAME_DELAY 2.5E5
 
 /* Global variables.*/
 
@@ -60,7 +61,8 @@ struct timeval beginning,	/* Time when game started. */
   now,				/* Time now. */
   before,			/* Time in the last frame. */
   elapsed_last,			/* Elapsed time since last frame. */
-  elapsed_total;		/* Elapsed time since game baginning. */
+  elapsed_total,		/* Elapsed time since game baginning. */
+  elapsed_pause;		/* Elapsed time total when the player press pause. */
 
 
 int movie_delay;		/* How long between move scenes scenes. */
@@ -68,6 +70,7 @@ int game_delay;			/* How long between game scenes. */
 int go_on; 			/* Whether to continue or to exit main loop.*/
 int player_lost;
 int restart_game; /* Whether the user has pressed to restart the game or not */
+int pause_game; /* Whether the user has pressed to pause the game or not */
 int on_settings; /* Whether the user is currently changing settings */
 int max_energy_blocks; /* Max number of energy blocks to display at once */
 
@@ -79,7 +82,7 @@ enum settings_t {
 int which_setting; /* Which setting the player is currently configuring */
 
 int block_count; 		/*Number of energy blocks collected */
-float score;     		/* Score: average blocks / time */
+
 
 /* SIGINT handler. The variable go_on controls the main loop. */
 
@@ -330,10 +333,12 @@ void showscene (scene_t* scene, int number, int menu)
   memcpy (&before, &now, sizeof (struct timeval));
   gettimeofday (&now, NULL);
 
-  if(!player_lost) {
+  if(!player_lost && !pause_game) {
     timeval_subtract (&elapsed_last, &now, &before);
 
+    /* elapsed_total = now - beginning + time before game is paused */
     timeval_subtract (&elapsed_total, &now, &beginning);
+    timeval_add(&elapsed_total, &elapsed_total, &elapsed_pause);
   }
 
   if(number == 0){
@@ -344,23 +349,22 @@ void showscene (scene_t* scene, int number, int menu)
 
   fps = 1 / (elapsed_last.tv_sec + (elapsed_last.tv_usec * 1E-6));
   
-  /*Calculate score based on time*/
-  if (elapsed_total.tv_sec != 0)
-  {
-    score = (block_count / (float) (elapsed_total.tv_sec));
-  }
 
   if (menu)
     {
       printf ("Elapsed: %5ds, fps=%5.2f\r\n", /* CR-LF because of ncurses. */
 	      (int) elapsed_total.tv_sec, fps);
       /*Add to the menu score and blocks collected */	  
-      printf ("Score: %.2f\r\n", score);
-      printf ("Energy: %d\r\n", snake.energy);
-      printf ("Blocks: %d\r\n", block_count);  
-	  
+      printf ("Score: %.d\r\n", block_count);
+      printf ("Energy: %d\r\n", snake.energy); 
+      for(i = 0; i < snake.energy; i++){
+	    if(i % ((MAX_SNAKE_ENERGY/100)*5) == 0){ /*prints one bar for every 5% energy left*/
+	   	 printf("|");
+	    }	 
+      }
+      printf("\n");
       printf ("Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\r\n");
-      printf ("          h: help & settings\r\n");
+      printf ("          h: help & settings | p: pause game\r\n");
     }
 }
 
@@ -413,9 +417,8 @@ void init_game (scene_t* scene)
 	
   srand(time(NULL));
   /*Set initial score and blocks collected 0 */
-  score = 0;
   block_count = 0;
-	snake.energy = 20;
+  snake.energy = NROWS + NCOLS;
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
@@ -439,8 +442,8 @@ void init_game (scene_t* scene)
 		snake.positions[i].y = initialPosition[i].y;
 
 		scene[0][initialPosition[i].y][initialPosition[i].x] = SNAKE_BODY;
-	}
 
+	}
    /* Generate energy blocks away from the borders */
   for (i=0; i<max_energy_blocks; i++)
   {
@@ -448,6 +451,9 @@ void init_game (scene_t* scene)
     energy_block[i].y = (rand() % (NROWS - 2)) + 1;
   }
 
+  /* Set to zero elapsed_total when the player pressed pause */
+  elapsed_pause.tv_sec = 0;
+  elapsed_pause.tv_usec = 0;
 }
 
 /* This function increases the snake's size by one.
@@ -520,8 +526,8 @@ void advance (scene_t* scene)
 	}
 
 	/* Lose energy when necessary */
-	if(snake.lastdirection != snake.direction && player_lost == 0){
-      snake.energy--;
+	if(player_lost == 0){
+      		snake.energy--;
 	}
 
 	snake.lastdirection = snake.direction;
@@ -534,7 +540,10 @@ void advance (scene_t* scene)
 			block_count += 1;
 			flag = 1;
 			energy_block[i].x = BLOCK_INACTIVE;
-      snake.energy+= 10;
+      			snake.energy+= 10;
+			if(snake.energy > MAX_SNAKE_ENERGY){
+				snake.energy = MAX_SNAKE_ENERGY;
+			}
 			more_snacks();
 		}
 	}
@@ -620,16 +629,16 @@ void playgame (scene_t* scene, char *data_dir)
       clear ();                               /* Clear screen. */
       refresh ();			      /* Refresh screen. */
 
-      if(!on_settings) {
+      if(!on_settings && !pause_game) {
         advance (scene);		               /* Advance game.*/
-      } else {
+      } else if (on_settings) {
         draw_settings(scene);
       }
 
       if(player_lost){
         /* Write score on the scene */
         char buffer[128];
-        sprintf(buffer, "%.2f", score);
+        sprintf(buffer, "%d", block_count);
         memcpy(&scene[1][27][30], buffer, strlen(buffer));
       }
 
@@ -638,6 +647,7 @@ void playgame (scene_t* scene, char *data_dir)
         go_on=1;
         player_lost=0;
         restart_game=0;
+        pause_game=0;
         gettimeofday (&beginning, NULL);
 
         init_game (scene);
@@ -645,7 +655,7 @@ void playgame (scene_t* scene, char *data_dir)
       }
 
       showscene (scene, /* Show k-th scene. */
-        player_lost ? 1 : on_settings ? 2 : 0,
+        player_lost ? 1 : on_settings ? 2 : pause_game ? 3 : 0,
         on_settings ? 0 : 1);
 
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
@@ -658,7 +668,7 @@ void playgame (scene_t* scene, char *data_dir)
 /* Process user input.
    This function runs in a separate thread. */
 
-void * userinput ()
+void * userinput()
 {
   int c;
   while (1)
@@ -725,6 +735,17 @@ void * userinput ()
       case 'r':
         restart_game = 1;	/* Restart game. */
       break;
+      case 'p':
+        if (pause_game) {
+           /* set beginning to current time and resume game */ 
+          gettimeofday (&beginning, NULL);
+          pause_game = 0;
+        } else {
+          /* set elapsed_pause to elapsed_total when player press 'p' and pause the game */
+          memcpy (&elapsed_pause, &elapsed_total, sizeof (struct timeval));
+          pause_game = 1;
+        }
+      break;
       case 'w':
         if(snake.lastdirection != down){
           snake.direction = up;
@@ -754,6 +775,7 @@ void * userinput ()
       }
     }
   }
+  return NULL;
 }
 
 
@@ -831,8 +853,8 @@ int main(int argc, char **argv)
 
   /* Default values. */
 
-  movie_delay = 1E5 / 4;	  /* Movie frame duration in usec (40usec) */
-  game_delay  = 1E6 / 4;	  /* Game frame duration in usec (4usec) */
+  movie_delay = 2.5E4;	  /* Movie frame duration in usec (40usec) */
+  game_delay  = 9E4;	  /* Game frame duration in usec (4usec) */
   max_energy_blocks = 3;
 
 
@@ -857,7 +879,9 @@ int main(int argc, char **argv)
   go_on=1;
   player_lost=0;
   restart_game=0;
+  pause_game=0;
   on_settings=1;
+
   gettimeofday (&beginning, NULL);
 
   init_game (game_scene);
