@@ -50,6 +50,7 @@
 #define ENERGY_BLOCK     '+'	 /* Character to draw the energy block. */
 
 #define MAX_ENERGY_BLOCKS_LIMIT 50	/* Limit on the maximum number of energy blocks. */
+#define MAX_SNAKE_ENERGY (NCOLS+NROWS) /* Limit on how much energy the snake can store.*/
 
 #define MIN_GAME_DELAY 10200
 #define MAX_GAME_DELAY 2.5E5
@@ -352,7 +353,12 @@ void showscene (scene_t* scene, int number, int menu)
       /*Add to the menu score and blocks collected */	  
       printf ("Score: %.d\r\n", block_count);
       printf ("Energy: %d\r\n", snake.energy); 
-	  
+      for(i = 0; i < snake.energy; i++){
+	    if(i % ((MAX_SNAKE_ENERGY/100)*5) == 0){ /*prints one bar for every 5% energy left*/
+	   	 printf("|");
+	    }	 
+      }
+      printf("\n");
       printf ("Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\r\n");
       printf ("          h: help & settings\r\n");
     }
@@ -408,7 +414,7 @@ void init_game (scene_t* scene)
   srand(time(NULL));
   /*Set initial score and blocks collected 0 */
   block_count = 0;
-  snake.energy = 20;
+  snake.energy = NROWS + NCOLS;
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
@@ -513,8 +519,8 @@ void advance (scene_t* scene)
 	}
 
 	/* Lose energy when necessary */
-	if(snake.lastdirection != snake.direction && player_lost == 0){
-      snake.energy--;
+	if(player_lost == 0){
+      		snake.energy--;
 	}
 
 	snake.lastdirection = snake.direction;
@@ -527,7 +533,10 @@ void advance (scene_t* scene)
 			block_count += 1;
 			flag = 1;
 			energy_block[i].x = BLOCK_INACTIVE;
-      snake.energy+= 10;
+      			snake.energy+= 10;
+			if(snake.energy > MAX_SNAKE_ENERGY){
+				snake.energy = MAX_SNAKE_ENERGY;
+			}
 			more_snacks();
 		}
 	}
