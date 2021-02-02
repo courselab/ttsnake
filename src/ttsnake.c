@@ -33,7 +33,7 @@
 
 /* Game defaults */
 
-#define N_GAME_SCENES  3	/* Number of frames of the gamepay scnene. */
+#define N_GAME_SCENES  4	/* Number of frames of the gamepay scnene. */
 
 #define NCOLS 90		/* Number of columns of the scene. */
 #define NROWS 40		/* Number of rows of the scene. */
@@ -61,7 +61,8 @@ struct timeval beginning,	/* Time when game started. */
   now,				/* Time now. */
   before,			/* Time in the last frame. */
   elapsed_last,			/* Elapsed time since last frame. */
-  elapsed_total;		/* Elapsed time since game baginning. */
+  elapsed_total,		/* Elapsed time since game baginning. */
+  elapsed_pause;		/* Elapsed time total when the player press pause. */
 
 
 int movie_delay;		/* How long between move scenes scenes. */
@@ -69,6 +70,7 @@ int game_delay;			/* How long between game scenes. */
 int go_on; 			/* Whether to continue or to exit main loop.*/
 int player_lost;
 int restart_game; /* Whether the user has pressed to restart the game or not */
+int pause_game; /* Whether the user has pressed to pause the game or not */
 int on_settings; /* Whether the user is currently changing settings */
 int max_energy_blocks; /* Max number of energy blocks to display at once */
 
@@ -331,10 +333,12 @@ void showscene (scene_t* scene, int number, int menu)
   memcpy (&before, &now, sizeof (struct timeval));
   gettimeofday (&now, NULL);
 
-  if(!player_lost) {
+  if(!player_lost && !pause_game) {
     timeval_subtract (&elapsed_last, &now, &before);
 
+    /* elapsed_total = now - beginning + time before game is paused */
     timeval_subtract (&elapsed_total, &now, &beginning);
+    timeval_add(&elapsed_total, &elapsed_total, &elapsed_pause);
   }
 
   if(number == 0){
@@ -360,7 +364,7 @@ void showscene (scene_t* scene, int number, int menu)
       }
       printf("\n");
       printf ("Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\r\n");
-      printf ("          h: help & settings\r\n");
+      printf ("          h: help & settings | p: pause game\r\n");
     }
 }
 
@@ -447,6 +451,9 @@ void init_game (scene_t* scene)
     energy_block[i].y = (rand() % (NROWS - 2)) + 1;
   }
 
+  /* Set to zero elapsed_total when the player pressed pause */
+  elapsed_pause.tv_sec = 0;
+  elapsed_pause.tv_usec = 0;
 }
 
 /* This function increases the snake's size by one.
@@ -622,9 +629,9 @@ void playgame (scene_t* scene, char *data_dir)
       clear ();                               /* Clear screen. */
       refresh ();			      /* Refresh screen. */
 
-      if(!on_settings) {
+      if(!on_settings && !pause_game) {
         advance (scene);		               /* Advance game.*/
-      } else {
+      } else if (on_settings) {
         draw_settings(scene);
       }
 
@@ -640,6 +647,7 @@ void playgame (scene_t* scene, char *data_dir)
         go_on=1;
         player_lost=0;
         restart_game=0;
+        pause_game=0;
         gettimeofday (&beginning, NULL);
 
         init_game (scene);
@@ -647,7 +655,7 @@ void playgame (scene_t* scene, char *data_dir)
       }
 
       showscene (scene, /* Show k-th scene. */
-        player_lost ? 1 : on_settings ? 2 : 0,
+        player_lost ? 1 : on_settings ? 2 : pause_game ? 3 : 0,
         on_settings ? 0 : 1);
 
       how_long.tv_nsec = (game_delay) * 1e3;  /* Compute delay. */
@@ -723,6 +731,17 @@ void * userinput()
       break;
       case 'r':
         restart_game = 1;	/* Restart game. */
+      break;
+      case 'p':
+        if (pause_game) {
+           /* set beginning to current time and resume game */ 
+          gettimeofday (&beginning, NULL);
+          pause_game = 0;
+        } else {
+          /* set elapsed_pause to elapsed_total when player press 'p' and pause the game */
+          memcpy (&elapsed_pause, &elapsed_total, sizeof (struct timeval));
+          pause_game = 1;
+        }
       break;
       case 'w':
         if(snake.lastdirection != down){
@@ -857,6 +876,7 @@ int main(int argc, char **argv)
   go_on=1;
   player_lost=0;
   restart_game=0;
+  pause_game=0;
   on_settings=0;
   gettimeofday (&beginning, NULL);
 

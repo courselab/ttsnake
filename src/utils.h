@@ -42,6 +42,11 @@
 int
 timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y);
 
+/* Add the ‘struct timeval’ values X and Y, storing the result in RESULT. */
+
+void
+timeval_add (struct timeval *result, struct timeval *x, struct timeval *y);
+
 /* Shows help screen. Exit code is -1 if isError is set to true */
 
 void show_help(char isError);
