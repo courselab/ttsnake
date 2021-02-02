@@ -76,12 +76,13 @@ and the data files in `/tmp/share`.
 ## EXECUTION
 
 ```
- Usage:  ttsnake [options]
+Usage: ttsnake [options]
 
-         Options
-         
-	 -h, --help      Displays this information message
-	 -d, --data      Selects a non-default data path
+  Options
+
+  -h, --help       Display this information message.
+  -d, --data       Selects a non-default data path
+  -v, --version    Outputs the program version	 
 ```
 
  ## Playing the game
