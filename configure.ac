@@ -18,7 +18,7 @@ dnl    You should have received a copy of the GNU General Public License
 dnl    along with .  If not, see <http://www.gnu.org/licenses/>.
 dnl
 
-AC_INIT([TexTronSnake], [0.0.1], [monaco@usp.br]) dnl Init Autoconf
+AC_INIT([TexTronSnake], [0.1.0-alpha], [monaco@usp.br],[ttsnake]) dnl Init Autoconf
 AC_PREREQ([2.65])                              dnl Required autoconf version    
 AC_CONFIG_AUX_DIR([build-aux])                 dnl Where to write auxiliary files                                                                              
 AC_CONFIG_MACRO_DIR([m4])                      dnl m4 files here       
