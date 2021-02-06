@@ -28,6 +28,7 @@
 #include <ncurses.h>
 #include <config.h>
 #include <getopt.h>
+#include <math.h>
 
 #include "utils.h"
 
@@ -35,8 +36,7 @@
 
 #define N_GAME_SCENES  4	/* Number of frames of the gamepay scnene. */
 
-#define NCOLS 90		/* Number of columns of the scene. */
-#define NROWS 40		/* Number of rows of the scene. */
+#define LOWER_PANEL_ROWS 6 /* Rows occupied by the lower panel showing score, energy etc */
 
 #define BLANK ' '		/* Blank-screen character. */
 
@@ -64,6 +64,8 @@ struct timeval beginning,	/* Time when game started. */
   elapsed_total,		/* Elapsed time since game baginning. */
   elapsed_pause;		/* Elapsed time total when the player press pause. */
 
+int NROWS; /* Number of rows in the game board */
+int NCOLS; /* Number of cols in the game board */
 
 int movie_delay;		/* How long between move scenes scenes. */
 int game_delay;			/* How long between game scenes. */
@@ -83,6 +85,7 @@ int which_setting; /* Which setting the player is currently configuring */
 
 int block_count; 		/*Number of energy blocks collected */
 
+WINDOW *main_window;
 
 /* SIGINT handler. The variable go_on controls the main loop. */
 
@@ -131,7 +134,7 @@ struct
 
 /* All chars of one single scene. */
 
-typedef char scene_t[NROWS][NCOLS];
+typedef char scene_t[40][90]; /* Maximum values. TODO: allocate dyamically */
 
 /* Count how many scene files exist in the given directory and returns this number one.
    Complexity: O(log(n)) */
@@ -306,15 +309,16 @@ int readscenes (char *dir, char *data_dir, scene_t** scene, int nscenes)
 void draw (scene_t* scene, int number)
 {
   int i, j;
+
+  wmove(main_window, 0, 0);
   for (i=0; i<NROWS; i++)
     {
       for (j=0; j<NCOLS; j++)
 	{
-	  putchar (scene[number][i][j]);
+	  waddch(main_window, scene[number][i][j]);
 	}
-      putchar ('\n');
-      putchar ('\r');
     }
+  wrefresh(main_window);
 }
 
 #define BLOCK_INACTIVE -1
@@ -352,19 +356,19 @@ void showscene (scene_t* scene, int number, int menu)
 
   if (menu)
     {
-      printf ("Elapsed: %5ds, fps=%5.2f\r\n", /* CR-LF because of ncurses. */
+      wprintw (main_window, "Elapsed: %5ds, fps=%5.2f\n", /* CR-LF because of ncurses. */
 	      (int) elapsed_total.tv_sec, fps);
       /*Add to the menu score and blocks collected */	  
-      printf ("Score: %.d\r\n", block_count);
-      printf ("Energy: %d\r\n", snake.energy); 
+      wprintw (main_window, "Score: %.d\n", block_count);
+      wprintw (main_window, "Energy: %d\n", snake.energy); 
       for(i = 0; i < snake.energy; i++){
 	    if(i % ((MAX_SNAKE_ENERGY/100)*5) == 0){ /*prints one bar for every 5% energy left*/
-	   	 printf("|");
+	   	 wprintw(main_window, "|");
 	    }	 
       }
-      printf("\n");
-      printf ("Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\r\n");
-      printf ("          h: help & settings | p: pause game\r\n");
+      wprintw(main_window, "\n");
+      wprintw (main_window, "Controls: q: quit | r: restart | WASD: move the snake | +/-: change game speed\n");
+      wprintw (main_window, "          h: help & settings | p: pause game\n");
     }
 }
 
@@ -592,8 +596,8 @@ void playmovie (scene_t* scene, int nscenes)
 
   for (k=0; (k < nscenes) && (go_on); k++)
     {
-      clear ();			               /* Clear screen.    */
-      refresh ();			       /* Refresh screen.  */
+      wclear (main_window);			               /* Clear screen.    */
+      wrefresh (main_window);			       /* Refresh screen.  */
       showscene (scene, k, 0);                 /* Show k-th scene .*/
       how_long.tv_nsec = (movie_delay) * 1e3;  /* Compute delay. */
       nanosleep (&how_long, NULL);	       /* Apply delay. */
@@ -850,6 +854,18 @@ int main(int argc, char **argv)
   noecho();
   curs_set(FALSE);
   cbreak();
+
+  /* Get terminal size */
+  int maxWidth, maxHeight;
+  getmaxyx(stdscr, maxHeight, maxWidth);
+
+  /* Set game board size */
+  NROWS = (int) fmin(maxHeight - LOWER_PANEL_ROWS, 40);
+  NCOLS = (int) fmin(maxWidth, 90);
+
+  main_window = newwin(NROWS + LOWER_PANEL_ROWS, NCOLS,
+          (maxHeight - NROWS - LOWER_PANEL_ROWS) / 2, (maxWidth - NCOLS) / 2);
+  wrefresh(main_window);
 
   /* Default values. */
 
