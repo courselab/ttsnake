@@ -769,6 +769,9 @@ void * userinput()
       case 'h':
         which_setting = 0;
         on_settings = 1; /* Begin settings */
+
+        /* If player was dead (i.e. on the YOU LOSE screen), we reset it here. */
+        player_lost = 0;
         break;
       default:
       break;
