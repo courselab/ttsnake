@@ -422,7 +422,7 @@ void init_game (scene_t* scene)
   srand(time(NULL));
   /*Set initial score and blocks collected 0 */
   block_count = 0;
-  snake.energy = NROWS + NCOLS;
+  snake.energy = (NCOLS + NROWS);
   snake.head.x = 0;
   snake.head.y = 0;
   snake.direction = right;
@@ -529,10 +529,9 @@ void advance (scene_t* scene)
 			break;
 	}
 
-	/* Lose energy when necessary */
-	if(player_lost == 0){
-      		snake.energy--;
-	}
+	/* Lose energy at every step */
+	if(player_lost == 0)
+    	snake.energy--;
 
 	snake.lastdirection = snake.direction;
 
@@ -544,7 +543,7 @@ void advance (scene_t* scene)
 			block_count += 1;
 			flag = 1;
 			energy_block[i].x = BLOCK_INACTIVE;
-      			snake.energy+= 10;
+			snake.energy += (NCOLS + NROWS) / 2 * (sqrt(2) / sqrt(max_energy_blocks + 1));
 			if(snake.energy > MAX_SNAKE_ENERGY){
 				snake.energy = MAX_SNAKE_ENERGY;
 			}
@@ -557,7 +556,7 @@ void advance (scene_t* scene)
   if(   head.x <= 0 || head.x >= NCOLS - 1
      || head.y <= 0 || head.y >= NROWS - 1
      || scene[0][head.y][head.x] == SNAKE_BODY
-     || snake.energy == 0)
+     || snake.energy <= 0)
   {
       player_lost = 1;
       return;
@@ -862,6 +861,12 @@ int main(int argc, char **argv)
   /* Set game board size */
   NROWS = (int) fmin(maxHeight - LOWER_PANEL_ROWS, 40);
   NCOLS = (int) fmin(maxWidth, 90);
+
+  if(NROWS < 20 || NCOLS < 80){
+    endwin();
+    fprintf(stderr, "You need a terminal with at least 20 rows and 80 columns to play.\n");
+    return EXIT_FAILURE;
+  }
 
   main_window = newwin(NROWS + LOWER_PANEL_ROWS, NCOLS,
           (maxHeight - NROWS - LOWER_PANEL_ROWS) / 2, (maxWidth - NCOLS) / 2);
